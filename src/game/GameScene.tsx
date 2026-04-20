@@ -69,7 +69,7 @@ export function GameScene({ worldId }: Props) {
             <p className="font-mono text-xs text-muted-foreground mb-4">
               Pointer-lock first-person controls. Press ESC to release.
             </p>
-            <ul className="font-mono text-[11px] text-foreground/90 grid grid-cols-2 gap-x-4 gap-y-1 text-left">
+            <ul className="font-mono text-[11px] text-foreground/90 grid grid-cols-2 gap-x-4 gap-y-1 text-left mb-6">
               <li><span className="text-primary">WASD</span> move</li>
               <li><span className="text-primary">Mouse</span> look</li>
               <li><span className="text-primary">Space</span> jump</li>
@@ -79,6 +79,14 @@ export function GameScene({ worldId }: Props) {
               <li><span className="text-secondary">L</span> special</li>
               <li><span className="text-muted-foreground">ESC</span> unlock</li>
             </ul>
+            <button
+              type="button"
+              onClick={() => setLocked(true)}
+              className="relative w-full py-3 font-title text-[13px] tracking-[3px] font-bold uppercase rounded-md text-background overflow-hidden transition hover:-translate-y-0.5 active:scale-[0.98] shadow-[0_0_20px_rgba(0,240,255,0.45)] hover:shadow-[0_0_40px_rgba(0,240,255,0.7),0_0_80px_rgba(0,240,255,0.3)]"
+              style={{ background: "linear-gradient(135deg, #00b8cc, #00f0ff)" }}
+            >
+              ▶ START
+            </button>
           </div>
         </div>
       )}
