@@ -4,9 +4,12 @@ import * as THREE from "three";
 import { mageAI } from "@/game/MirrorMageAI";
 import type { CounterAction } from "@/game/types";
 
+export type MageVariant = "mage" | "soldier" | "ghost" | "golem";
+
 interface Props {
   playerPos: React.MutableRefObject<THREE.Vector3>;
   color?: string;
+  variant?: MageVariant;
   onAction?: (a: CounterAction) => void;
 }
 

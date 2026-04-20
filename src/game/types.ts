@@ -12,8 +12,10 @@ export interface Action {
   wasSuccessful: boolean;
   importanceScore: number;
   timestamp: number;
-  world: "vodex" | "aether";
+  world: WorldId;
 }
+
+export type WorldId = "vodex" | "battleground" | "virtual" | "blockworld";
 
 export type CounterAction =
   | "DODGE" | "PARRY" | "INTERCEPT" | "SPECIAL" | "ATTACK";
