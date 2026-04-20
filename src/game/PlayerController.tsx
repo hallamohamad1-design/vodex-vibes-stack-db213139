@@ -4,10 +4,10 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { useKeyboard } from "@/game/useKeyboard";
 import { mageAI } from "@/game/MirrorMageAI";
-import type { ActionType } from "@/game/types";
+import type { ActionType, WorldId } from "@/game/types";
 
 interface Props {
-  worldId: "vodex" | "aether";
+  worldId: WorldId;
   onPlayerMoved?: (pos: THREE.Vector3) => void;
   bounds?: number;
 }
@@ -108,5 +108,5 @@ export function PlayerController({ worldId, onPlayerMoved, bounds = 28 }: Props)
     onPlayerMoved?.(camera.position);
   });
 
-  return <PointerLockControls />;
+  return <PointerLockControls selector="canvas" />;
 }

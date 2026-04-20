@@ -4,9 +4,12 @@ import * as THREE from "three";
 import { mageAI } from "@/game/MirrorMageAI";
 import type { CounterAction } from "@/game/types";
 
+export type MageVariant = "mage" | "soldier" | "ghost" | "golem";
+
 interface Props {
   playerPos: React.MutableRefObject<THREE.Vector3>;
   color?: string;
+  variant?: MageVariant;
   onAction?: (a: CounterAction) => void;
 }
 
@@ -14,7 +17,7 @@ interface Props {
  * Mirror Mage enemy. Every ~1.2s it asks the AI engine to decide a counter
  * based on the queue's predicted player action, then performs a visible move.
  */
-export function MirrorMage({ playerPos, color = "#bf00ff", onAction }: Props) {
+export function MirrorMage({ playerPos, color = "#bf00ff", variant = "mage", onAction }: Props) {
   const group = useRef<THREE.Group>(null);
   const orbit = useRef(0);
   const tick = useRef(0);
@@ -86,31 +89,80 @@ export function MirrorMage({ playerPos, color = "#bf00ff", onAction }: Props) {
 
   return (
     <group ref={group}>
-      {/* mage body */}
-      <mesh castShadow>
-        <icosahedronGeometry args={[0.7, 1]} />
-        <meshStandardMaterial
-          color={bodyColor}
-          emissive={bodyColor}
-          emissiveIntensity={1.2}
-          roughness={0.2}
-          metalness={0.6}
-        />
-      </mesh>
-      {/* halo */}
-      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-        <torusGeometry args={[1.2, 0.04, 12, 64]} />
-        <meshBasicMaterial color={bodyColor} transparent opacity={0.7} />
-      </mesh>
-      {/* point light */}
+      {variant === "soldier" ? (
+        // Tactical silhouette: torso + head + helmet visor
+        <group>
+          <mesh castShadow position={[0, 0, 0]}>
+            <boxGeometry args={[0.9, 1.1, 0.5]} />
+            <meshStandardMaterial color={bodyColor} roughness={0.6} metalness={0.4} />
+          </mesh>
+          <mesh castShadow position={[0, 0.85, 0]}>
+            <boxGeometry args={[0.5, 0.5, 0.5]} />
+            <meshStandardMaterial color="#1a1a1a" roughness={0.3} metalness={0.8} />
+          </mesh>
+          <mesh position={[0, 0.85, 0.26]}>
+            <planeGeometry args={[0.4, 0.12]} />
+            <meshBasicMaterial color={bodyColor} />
+          </mesh>
+        </group>
+      ) : variant === "ghost" ? (
+        // Glitch ghost: wireframe icosa + inner glow core
+        <group>
+          <mesh>
+            <icosahedronGeometry args={[0.95, 1]} />
+            <meshBasicMaterial color={bodyColor} wireframe transparent opacity={0.9} />
+          </mesh>
+          <mesh>
+            <icosahedronGeometry args={[0.45, 0]} />
+            <meshStandardMaterial color={bodyColor} emissive={bodyColor} emissiveIntensity={3} />
+          </mesh>
+        </group>
+      ) : variant === "golem" ? (
+        // Blocky golem: stacked cubes
+        <group>
+          <mesh castShadow position={[0, -0.4, 0]}>
+            <boxGeometry args={[1.1, 0.9, 0.7]} />
+            <meshStandardMaterial color={bodyColor} roughness={1} />
+          </mesh>
+          <mesh castShadow position={[0, 0.5, 0]}>
+            <boxGeometry args={[0.7, 0.7, 0.7]} />
+            <meshStandardMaterial color={bodyColor} roughness={1} />
+          </mesh>
+          <mesh position={[-0.15, 0.6, 0.36]}>
+            <boxGeometry args={[0.15, 0.15, 0.05]} />
+            <meshBasicMaterial color="#ff0040" />
+          </mesh>
+          <mesh position={[0.15, 0.6, 0.36]}>
+            <boxGeometry args={[0.15, 0.15, 0.05]} />
+            <meshBasicMaterial color="#ff0040" />
+          </mesh>
+        </group>
+      ) : (
+        // Default mage: icosa + halo + shards
+        <>
+          <mesh castShadow>
+            <icosahedronGeometry args={[0.7, 1]} />
+            <meshStandardMaterial
+              color={bodyColor}
+              emissive={bodyColor}
+              emissiveIntensity={1.2}
+              roughness={0.2}
+              metalness={0.6}
+            />
+          </mesh>
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[1.2, 0.04, 12, 64]} />
+            <meshBasicMaterial color={bodyColor} transparent opacity={0.7} />
+          </mesh>
+          {[0, 1, 2].map(i => (
+            <mesh key={i} position={[Math.cos(i) * 1.4, Math.sin(i) * 0.4, Math.sin(i) * 1.4]}>
+              <octahedronGeometry args={[0.18, 0]} />
+              <meshStandardMaterial color={bodyColor} emissive={bodyColor} emissiveIntensity={2} />
+            </mesh>
+          ))}
+        </>
+      )}
       <pointLight color={bodyColor} intensity={3} distance={14} />
-      {/* trailing shards */}
-      {[0, 1, 2].map(i => (
-        <mesh key={i} position={[Math.cos(i) * 1.4, Math.sin(i) * 0.4, Math.sin(i) * 1.4]}>
-          <octahedronGeometry args={[0.18, 0]} />
-          <meshStandardMaterial color={bodyColor} emissive={bodyColor} emissiveIntensity={2} />
-        </mesh>
-      ))}
     </group>
   );
 }
