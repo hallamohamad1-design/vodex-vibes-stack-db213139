@@ -2,14 +2,19 @@ import { Suspense, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Link } from "react-router-dom";
 import { VodexWorld } from "@/game/worlds/VodexWorld";
-import { AetherWorld } from "@/game/worlds/AetherWorld";
+import { BattlegroundWorld } from "@/game/worlds/BattlegroundWorld";
+import { VirtualWorld } from "@/game/worlds/VirtualWorld";
+import { BlockWorld } from "@/game/worlds/BlockWorld";
 import { MemoryHUD } from "@/game/MemoryHUD";
+import type { WorldId } from "@/game/types";
 
-interface Props { worldId: "vodex" | "aether"; }
+interface Props { worldId: WorldId; }
 
-const META = {
-  vodex:  { name: "VODEX REALM",  hint: "Neon grid · cyan obelisks", color: "text-primary text-glow-cyan" },
-  aether: { name: "AETHER SPIRE", hint: "Violet ritual · gold runes", color: "text-secondary text-glow-purple" },
+const META: Record<WorldId, { name: string; hint: string; color: string; next: WorldId }> = {
+  vodex:        { name: "VODEX REALM",   hint: "Neon grid · cyan obelisks",        color: "text-primary text-glow-cyan",   next: "battleground" },
+  battleground: { name: "BATTLEGROUND",  hint: "Tactical sands · ruined walls",    color: "text-orange text-glow-gold",     next: "virtual" },
+  virtual:      { name: "VIRTUAL CORE",  hint: "Cyber data · holo wireframes",     color: "text-primary text-glow-cyan",    next: "blockworld" },
+  blockworld:   { name: "BLOCKWORLD",    hint: "Voxel terrain · blocky golem",     color: "text-green text-glow-gold",      next: "vodex" },
 };
 
 export function GameScene({ worldId }: Props) {
@@ -24,13 +29,15 @@ export function GameScene({ worldId }: Props) {
         onPointerDown={() => setLocked(true)}
       >
         <Suspense fallback={null}>
-          {worldId === "vodex" ? <VodexWorld /> : <AetherWorld />}
+          {worldId === "vodex"        && <VodexWorld />}
+          {worldId === "battleground" && <BattlegroundWorld />}
+          {worldId === "virtual"      && <VirtualWorld />}
+          {worldId === "blockworld"   && <BlockWorld />}
         </Suspense>
       </Canvas>
 
       <MemoryHUD />
 
-      {/* World tag (top center) */}
       <div className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 z-20 text-center">
         <h1 className={`font-title text-lg sm:text-2xl tracking-[0.4em] ${m.color}`}>
           {m.name}
@@ -38,13 +45,12 @@ export function GameScene({ worldId }: Props) {
         <p className="font-mono text-[10px] sm:text-xs text-muted-foreground">{m.hint}</p>
       </div>
 
-      {/* Top-right nav */}
       <div className="absolute top-3 right-3 z-20 flex gap-2">
         <Link
-          to={worldId === "vodex" ? "/play/aether" : "/play/vodex"}
+          to={`/play/${m.next}`}
           className="panel px-3 py-1.5 font-mono text-xs hover:box-glow-cyan transition"
         >
-          ⇄ {worldId === "vodex" ? "AETHER" : "VODEX"}
+          ⇄ NEXT
         </Link>
         <Link
           to="/"
@@ -54,7 +60,6 @@ export function GameScene({ worldId }: Props) {
         </Link>
       </div>
 
-      {/* Click-to-play overlay */}
       {!locked && (
         <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/60 backdrop-blur-sm">
           <div className="panel scanline relative p-6 sm:p-10 text-center max-w-md mx-4 animate-pop-in">

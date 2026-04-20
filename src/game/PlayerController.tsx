@@ -108,5 +108,5 @@ export function PlayerController({ worldId, onPlayerMoved, bounds = 28 }: Props)
     onPlayerMoved?.(camera.position);
   });
 
-  return <PointerLockControls />;
+  return <PointerLockControls selector="canvas" />;
 }
