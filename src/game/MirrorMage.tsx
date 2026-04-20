@@ -17,7 +17,7 @@ interface Props {
  * Mirror Mage enemy. Every ~1.2s it asks the AI engine to decide a counter
  * based on the queue's predicted player action, then performs a visible move.
  */
-export function MirrorMage({ playerPos, color = "#bf00ff", onAction }: Props) {
+export function MirrorMage({ playerPos, color = "#bf00ff", variant = "mage", onAction }: Props) {
   const group = useRef<THREE.Group>(null);
   const orbit = useRef(0);
   const tick = useRef(0);
