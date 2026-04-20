@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -29,6 +29,7 @@ const App = () => (
             <Route path="/play/battleground" element={<ProtectedRoute><Battleground /></ProtectedRoute>} />
             <Route path="/play/virtual" element={<ProtectedRoute><Virtual /></ProtectedRoute>} />
             <Route path="/play/blockworld" element={<ProtectedRoute><Blockworld /></ProtectedRoute>} />
+            <Route path="/play/aether" element={<Navigate to="/play/battleground" replace />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
