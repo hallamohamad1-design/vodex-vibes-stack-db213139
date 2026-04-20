@@ -75,7 +75,7 @@ const Auth = () => {
     }
     setBusy(true);
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: parsed.data.email,
         password: parsed.data.password,
         options: {
