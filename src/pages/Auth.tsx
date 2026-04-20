@@ -4,6 +4,7 @@ import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { ParticleBackground } from "@/components/ParticleBackground";
 
 const signUpSchema = z.object({
   username: z.string().trim().min(3, "Callsign min 3 chars").max(20, "Max 20 chars"),
@@ -96,6 +97,8 @@ const Auth = () => {
   // Subtle loading state — but we never block on `loading` initial fetch since user-null is the default
   return (
     <div className="min-h-screen relative overflow-hidden flex items-center justify-center px-4 py-8 bg-[#060810]">
+      {/* Particle network — ported from ECHO.x */}
+      <ParticleBackground />
       {/* Hex grid background */}
       <div
         className="fixed inset-0 pointer-events-none animate-[gridShift_30s_linear_infinite]"
