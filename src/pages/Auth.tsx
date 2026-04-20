@@ -89,6 +89,12 @@ const Auth = () => {
         return;
       }
       toast.success(`Echo Identity forged. Welcome, ${parsed.data.username}.`);
+      // If email confirmation is off, a session is returned — useEffect will redirect.
+      // If confirmation is on, prompt user to check email.
+      if (!data.session) {
+        toast.info("Check your email to confirm — or just log in now.");
+        setMode("login");
+      }
     } finally {
       setBusy(false);
     }
