@@ -4,6 +4,7 @@ import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { ParticleBackground } from "@/components/ParticleBackground";
 
 const signUpSchema = z.object({
   username: z.string().trim().min(3, "Callsign min 3 chars").max(20, "Max 20 chars"),
