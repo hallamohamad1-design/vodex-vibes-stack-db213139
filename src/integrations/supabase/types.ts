@@ -14,6 +14,99 @@ export type Database = {
   }
   public: {
     Tables: {
+      mage_events: {
+        Row: {
+          counter: string
+          created_at: string
+          id: string
+          predicted: string | null
+          source: string
+          user_id: string
+          world: string
+        }
+        Insert: {
+          counter: string
+          created_at?: string
+          id?: string
+          predicted?: string | null
+          source?: string
+          user_id: string
+          world: string
+        }
+        Update: {
+          counter?: string
+          created_at?: string
+          id?: string
+          predicted?: string | null
+          source?: string
+          user_id?: string
+          world?: string
+        }
+        Relationships: []
+      }
+      mage_memory: {
+        Row: {
+          history: Json
+          queue: Json
+          stack: Json
+          total_actions: number
+          updated_at: string
+          user_id: string
+          world: string
+        }
+        Insert: {
+          history?: Json
+          queue?: Json
+          stack?: Json
+          total_actions?: number
+          updated_at?: string
+          user_id: string
+          world: string
+        }
+        Update: {
+          history?: Json
+          queue?: Json
+          stack?: Json
+          total_actions?: number
+          updated_at?: string
+          user_id?: string
+          world?: string
+        }
+        Relationships: []
+      }
+      player_stats: {
+        Row: {
+          deaths: number
+          kills: number
+          max_combo: number
+          score: number
+          signature_moves: number
+          updated_at: string
+          user_id: string
+          world: string
+        }
+        Insert: {
+          deaths?: number
+          kills?: number
+          max_combo?: number
+          score?: number
+          signature_moves?: number
+          updated_at?: string
+          user_id: string
+          world: string
+        }
+        Update: {
+          deaths?: number
+          kills?: number
+          max_combo?: number
+          score?: number
+          signature_moves?: number
+          updated_at?: string
+          user_id?: string
+          world?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -43,7 +136,19 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      leaderboard_public: {
+        Row: {
+          deaths: number | null
+          kills: number | null
+          max_combo: number | null
+          score: number | null
+          signature_moves: number | null
+          updated_at: string | null
+          username: string | null
+          world: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
