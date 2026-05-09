@@ -1,4 +1,4 @@
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Link } from "react-router-dom";
 import { VodexWorld } from "@/game/worlds/VodexWorld";
@@ -6,20 +6,52 @@ import { BattlegroundWorld } from "@/game/worlds/BattlegroundWorld";
 import { VirtualWorld } from "@/game/worlds/VirtualWorld";
 import { BlockWorld } from "@/game/worlds/BlockWorld";
 import { MemoryHUD } from "@/game/MemoryHUD";
+import { EnemyActionFeed } from "@/game/EnemyActionFeed";
+import { useAuth } from "@/hooks/useAuth";
+import { getMageAI } from "@/game/MirrorMageAI";
+import { loadMemory, saveMemory, saveStats, logEvent } from "@/game/memoryPersistence";
 import type { WorldId } from "@/game/types";
 
 interface Props { worldId: WorldId; }
 
-const META: Record<WorldId, { name: string; hint: string; color: string; next: WorldId }> = {
-  vodex:        { name: "VODEX REALM",   hint: "Neon grid · cyan obelisks",        color: "text-primary text-glow-cyan",   next: "battleground" },
-  battleground: { name: "BATTLEGROUND",  hint: "Tactical sands · ruined walls",    color: "text-orange text-glow-gold",     next: "virtual" },
-  virtual:      { name: "VIRTUAL CORE",  hint: "Cyber data · holo wireframes",     color: "text-primary text-glow-cyan",    next: "blockworld" },
-  blockworld:   { name: "BLOCKWORLD",    hint: "Voxel terrain · blocky golem",     color: "text-green text-glow-gold",      next: "vodex" },
+const META: Record<WorldId, { name: string; hint: string; color: string; next: WorldId; sigs: [string, string, string] }> = {
+  vodex:        { name: "VODEX REALM",   hint: "Neon grid · cyan obelisks",        color: "text-primary text-glow-cyan",  next: "battleground", sigs: ["HACK", "OVERLOAD", "KILL"] },
+  battleground: { name: "BATTLEGROUND",  hint: "Tactical sands · ruined walls",    color: "text-orange text-glow-gold",   next: "virtual",      sigs: ["GRENADE", "SNIPE", "KILL"] },
+  virtual:      { name: "VIRTUAL CORE",  hint: "Cyber data · holo wireframes",     color: "text-primary text-glow-cyan",  next: "blockworld",   sigs: ["GLITCH", "REWIND", "KILL"] },
+  blockworld:   { name: "BLOCKWORLD",    hint: "Voxel terrain · blocky golem",     color: "text-green text-glow-gold",    next: "vodex",        sigs: ["MINE", "BUILD", "KILL"] },
 };
 
 export function GameScene({ worldId }: Props) {
   const [locked, setLocked] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
   const m = META[worldId];
+  const { user } = useAuth();
+
+  // Load memory once per world/user
+  useEffect(() => {
+    if (!user) { setHydrated(true); return; }
+    let cancelled = false;
+    loadMemory(user.id, worldId).then(() => { if (!cancelled) setHydrated(true); });
+    return () => { cancelled = true; };
+  }, [user, worldId]);
+
+  // Persist memory + stats every 5s and on unmount; log enemy events live
+  useEffect(() => {
+    if (!user || !hydrated) return;
+    const interval = setInterval(() => {
+      saveMemory(user.id, worldId);
+      saveStats(user.id, worldId);
+    }, 5000);
+    const unsubEvents = getMageAI(worldId).subscribeEvents((e) => {
+      logEvent(user.id, worldId, e).catch(() => {});
+    });
+    return () => {
+      clearInterval(interval);
+      unsubEvents();
+      saveMemory(user.id, worldId);
+      saveStats(user.id, worldId);
+    };
+  }, [user, worldId, hydrated]);
 
   return (
     <div className="fixed inset-0 bg-background">
@@ -36,7 +68,8 @@ export function GameScene({ worldId }: Props) {
         </Suspense>
       </Canvas>
 
-      <MemoryHUD />
+      <MemoryHUD worldId={worldId} />
+      <EnemyActionFeed worldId={worldId} />
 
       <div className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 z-20 text-center">
         <h1 className={`font-title text-lg sm:text-2xl tracking-[0.4em] ${m.color}`}>
@@ -46,6 +79,9 @@ export function GameScene({ worldId }: Props) {
       </div>
 
       <div className="absolute top-3 right-3 z-20 flex gap-2">
+        <Link to="/leaderboard" className="panel px-3 py-1.5 font-mono text-xs hover:box-glow-gold transition">
+          ★ LEADERS
+        </Link>
         <Link
           to={`/play/${m.next}`}
           className="panel px-3 py-1.5 font-mono text-xs hover:box-glow-cyan transition"
@@ -77,6 +113,9 @@ export function GameScene({ worldId }: Props) {
               <li><span className="text-accent">J</span> attack</li>
               <li><span className="text-accent">K</span> block</li>
               <li><span className="text-secondary">L</span> special</li>
+              <li><span className="text-gold">Q</span> {m.sigs[0]}</li>
+              <li><span className="text-gold">E</span> {m.sigs[1]}</li>
+              <li><span className="text-red-400">R</span> {m.sigs[2]}</li>
               <li><span className="text-muted-foreground">ESC</span> unlock</li>
             </ul>
             <button

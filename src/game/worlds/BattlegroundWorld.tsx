@@ -92,7 +92,7 @@ export function BattlegroundWorld() {
       ))}
 
       <PlayerController worldId="battleground" bounds={48} onPlayerMoved={(p) => playerPos.current.copy(p)} />
-      <MirrorMage playerPos={playerPos} color="#c44a2a" variant="soldier" />
+      <MirrorMage playerPos={playerPos} worldId="battleground" color="#c44a2a" variant="soldier" />
     </>
   );
 }

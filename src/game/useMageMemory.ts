@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { mageAI, type MemorySnapshot } from "./MirrorMageAI";
+import { getMageAI, mageAI, type MemorySnapshot } from "./MirrorMageAI";
+import type { WorldId } from "./types";
 
-export function useMageMemory(): MemorySnapshot {
-  const [snap, setSnap] = useState<MemorySnapshot>(() => mageAI.snapshot());
-  useEffect(() => mageAI.subscribe(setSnap), []);
+export function useMageMemory(world?: WorldId): MemorySnapshot {
+  const ai = world ? getMageAI(world) : mageAI;
+  const [snap, setSnap] = useState<MemorySnapshot>(() => ai.snapshot());
+  useEffect(() => ai.subscribe(setSnap), [ai]);
   return snap;
 }

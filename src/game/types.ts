@@ -2,7 +2,12 @@
 export type ActionType =
   | "ATTACK" | "DODGE" | "BLOCK"
   | "MOVE"   | "JUMP"  | "SPRINT"
-  | "SPECIAL" | "KILL" | "HEAL";
+  | "SPECIAL" | "KILL" | "HEAL"
+  // World-specific signature actions:
+  | "HACK"   | "OVERLOAD"   // vodex
+  | "GRENADE"| "SNIPE"      // battleground
+  | "GLITCH" | "REWIND"     // virtual
+  | "MINE"   | "BUILD";     // blockworld
 
 export interface Action {
   id: number;
@@ -18,4 +23,13 @@ export interface Action {
 export type WorldId = "vodex" | "battleground" | "virtual" | "blockworld";
 
 export type CounterAction =
-  | "DODGE" | "PARRY" | "INTERCEPT" | "SPECIAL" | "ATTACK";
+  | "DODGE" | "PARRY" | "INTERCEPT" | "SPECIAL" | "ATTACK"
+  | "REGRESS" | "MIMIC";
+
+export interface EnemyEvent {
+  id: number;
+  predicted: ActionType | null;
+  counter: CounterAction;
+  source: "queue" | "stack";
+  timestamp: number;
+}

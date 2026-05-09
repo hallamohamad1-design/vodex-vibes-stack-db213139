@@ -1,5 +1,6 @@
 import { useMageMemory } from "@/game/useMageMemory";
 import { cn } from "@/lib/utils";
+import type { WorldId } from "@/game/types";
 
 const typeColor: Record<string, string> = {
   ATTACK: "bg-accent text-accent-foreground",
@@ -11,15 +12,22 @@ const typeColor: Record<string, string> = {
   SPECIAL:"bg-secondary text-secondary-foreground",
   KILL:   "bg-gold text-background",
   HEAL:   "bg-green text-background",
+  HACK:   "bg-primary/80 text-background border border-primary",
+  OVERLOAD:"bg-secondary/80 text-background border border-secondary",
+  GRENADE:"bg-orange/80 text-background border border-orange",
+  SNIPE:  "bg-gold/80 text-background border border-gold",
+  GLITCH: "bg-secondary/80 text-background border border-secondary",
+  REWIND: "bg-primary/60 text-background border border-primary",
+  MINE:   "bg-orange/70 text-background border border-orange",
+  BUILD:  "bg-green/70 text-background border border-green",
 };
 
 /** On-screen HUD: live queue/stack/predicted/counter visualization. */
-export function MemoryHUD() {
-  const m = useMageMemory();
+export function MemoryHUD({ worldId }: { worldId?: WorldId } = {}) {
+  const m = useMageMemory(worldId);
 
   return (
     <div className="pointer-events-none absolute inset-0 z-10 p-3 sm:p-5 flex flex-col gap-3 text-foreground">
-      {/* TOP STATUS BAR */}
       <div className="flex flex-wrap gap-3 items-center justify-between">
         <div className="panel scanline relative px-3 py-2 font-mono text-xs sm:text-sm">
           <span className="text-primary text-glow-cyan">PREDICTED:</span>{" "}
@@ -28,16 +36,18 @@ export function MemoryHUD() {
           <span className="text-foreground">{m.lastCounter ?? "—"}</span>
         </div>
         <div className="panel px-3 py-2 font-mono text-xs sm:text-sm">
-          <span className="text-muted-foreground">ACTIONS RECORDED:</span>{" "}
+          <span className="text-muted-foreground">ACTIONS:</span>{" "}
           <span className="text-glow-cyan text-primary">{m.totalActions}</span>
+          <span className="ml-3 text-muted-foreground">KILLS:</span>{" "}
+          <span className="text-gold">{m.kills}</span>
+          <span className="ml-3 text-muted-foreground">SIG:</span>{" "}
+          <span className="text-secondary">{m.signatureMoves}</span>
         </div>
       </div>
 
       <div className="flex-1" />
 
-      {/* BOTTOM: queue + stack panels */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        {/* Circular Queue */}
         <div className="panel p-3 box-glow-cyan/30">
           <div className="flex items-baseline justify-between mb-2">
             <h3 className="font-title text-sm tracking-[0.3em] text-primary text-glow-cyan">
@@ -67,7 +77,6 @@ export function MemoryHUD() {
           </div>
         </div>
 
-        {/* Stack */}
         <div className="panel p-3">
           <div className="flex items-baseline justify-between mb-2">
             <h3 className="font-title text-sm tracking-[0.3em] text-secondary text-glow-purple">
