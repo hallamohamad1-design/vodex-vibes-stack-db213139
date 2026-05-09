@@ -85,7 +85,7 @@ export function VirtualWorld() {
       ))}
 
       <PlayerController worldId="virtual" bounds={45} onPlayerMoved={(p) => playerPos.current.copy(p)} />
-      <MirrorMage playerPos={playerPos} color="#ff00aa" variant="ghost" />
+      <MirrorMage playerPos={playerPos} worldId="virtual" color="#ff00aa" variant="ghost" />
     </>
   );
 }

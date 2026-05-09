@@ -43,6 +43,12 @@ const Hub = () => {
         <span className="font-mono text-[11px] tracking-[0.3em] text-primary text-glow-cyan">
           {username || user?.email?.split("@")[0] || "ECHO"}
         </span>
+        <Link
+          to="/leaderboard"
+          className="font-mono text-[10px] tracking-[0.3em] text-gold hover:text-glow-gold transition"
+        >
+          ★ LEADERS
+        </Link>
         <button
           onClick={signOut}
           className="font-mono text-[10px] tracking-[0.3em] text-muted-foreground hover:text-accent transition"

@@ -93,7 +93,7 @@ export function BlockWorld() {
       ))}
 
       <PlayerController worldId="blockworld" bounds={28} onPlayerMoved={(p) => playerPos.current.copy(p)} />
-      <MirrorMage playerPos={playerPos} color="#8b4513" variant="golem" />
+      <MirrorMage playerPos={playerPos} worldId="blockworld" color="#8b4513" variant="golem" />
     </>
   );
 }

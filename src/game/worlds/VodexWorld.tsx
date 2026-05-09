@@ -70,7 +70,7 @@ export function VodexWorld() {
         bounds={28}
         onPlayerMoved={(p) => playerPos.current.copy(p)}
       />
-      <MirrorMage playerPos={playerPos} color="#bf00ff" />
+      <MirrorMage playerPos={playerPos} worldId="vodex" color="#bf00ff" />
     </>
   );
 }
