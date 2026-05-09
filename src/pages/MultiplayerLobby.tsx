@@ -50,6 +50,12 @@ export default function MultiplayerLobby() {
       if (inviteData) {
         setInvites(inviteData.map(i => ({ ...i, sender_username: (i.profiles as any)?.username })) as any);
       }
+      // Check own profile
+      const { data: ownProfile, error: profileErr } = await supabase.from("profiles").select("username").eq("user_id", user.id).maybeSingle();
+      if (profileErr) console.error("Profile Fetch Error:", profileErr);
+      if (!ownProfile) {
+        toast.error("Echo Identity not found. Try logging out and back in to sync your profile.");
+      }
     };
 
     fetchData();
@@ -105,8 +111,12 @@ export default function MultiplayerLobby() {
       content: newMessage.trim(),
     });
 
-    if (error) toast.error("Failed to send message");
-    else setNewMessage("");
+    if (error) {
+      console.error("Chat Error:", error);
+      toast.error(`Failed to send message: ${error.message}`);
+    } else {
+      setNewMessage("");
+    }
   };
 
   const sendInvite = async (recipientId: string) => {
