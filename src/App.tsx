@@ -12,6 +12,7 @@ import Battleground from "./pages/Battleground.tsx";
 import Virtual from "./pages/Virtual.tsx";
 import Blockworld from "./pages/Blockworld.tsx";
 import Leaderboard from "./pages/Leaderboard.tsx";
+import MultiplayerLobby from "./pages/MultiplayerLobby.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+            <Route path="/lobby" element={<ProtectedRoute><MultiplayerLobby /></ProtectedRoute>} />
             <Route path="/play/vodex" element={<ProtectedRoute><Vodex /></ProtectedRoute>} />
             <Route path="/play/battleground" element={<ProtectedRoute><Battleground /></ProtectedRoute>} />
             <Route path="/play/virtual" element={<ProtectedRoute><Virtual /></ProtectedRoute>} />

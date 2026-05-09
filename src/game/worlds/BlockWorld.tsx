@@ -5,7 +5,7 @@ import { PlayerController } from "@/game/PlayerController";
 import { MirrorMage } from "@/game/MirrorMage";
 
 /** Blockworld — Minecraft-style voxel terrain with blocky trees. */
-export function BlockWorld() {
+export function BlockWorld({ isMultiplayer, role }: { isMultiplayer?: boolean; role?: string | null }) {
   const playerPos = useRef(new THREE.Vector3(0, 1.7, 8));
 
   // generate a small heightmap of grass blocks

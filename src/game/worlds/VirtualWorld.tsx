@@ -6,7 +6,7 @@ import { PlayerController } from "@/game/PlayerController";
 import { MirrorMage } from "@/game/MirrorMage";
 
 /** Virtual — pure cyberspace: floating data platforms, holo wireframes, scanlines. */
-export function VirtualWorld() {
+export function VirtualWorld({ isMultiplayer, role }: { isMultiplayer?: boolean; role?: string | null }) {
   const playerPos = useRef(new THREE.Vector3(0, 1.7, 8));
   const platformsRef = useRef<THREE.Group>(null);
 

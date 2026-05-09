@@ -1,6 +1,7 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { PointerLockControls } from "@react-three/drei";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import * as THREE from "three";
 import { useKeyboard } from "@/game/useKeyboard";
 import { getMageAI } from "@/game/MirrorMageAI";
@@ -10,6 +11,8 @@ interface Props {
   worldId: WorldId;
   onPlayerMoved?: (pos: THREE.Vector3) => void;
   bounds?: number;
+  isMultiplayer?: boolean;
+  inviteId?: string | null;
 }
 
 const WORLD_SIGNATURES: Record<WorldId, [ActionType, ActionType, ActionType]> = {
@@ -19,7 +22,7 @@ const WORLD_SIGNATURES: Record<WorldId, [ActionType, ActionType, ActionType]> = 
   blockworld:   ["MINE", "BUILD", "KILL"],
 };
 
-export function PlayerController({ worldId, onPlayerMoved, bounds = 28 }: Props) {
+export function PlayerController({ worldId, onPlayerMoved, bounds = 28, isMultiplayer, inviteId }: Props) {
   const { camera } = useThree();
   const keys = useKeyboard();
   const velocity = useRef(new THREE.Vector3());
@@ -29,6 +32,7 @@ export function PlayerController({ worldId, onPlayerMoved, bounds = 28 }: Props)
   const comboCount = useRef(0);
   const comboResetT = useRef(0);
   const ai = getMageAI(worldId);
+  const syncTick = useRef(0);
 
   useEffect(() => {
     camera.position.set(0, 1.7, 8);
@@ -124,6 +128,22 @@ export function PlayerController({ worldId, onPlayerMoved, bounds = 28 }: Props)
     prev.current.sig3 = k.sig3;
 
     onPlayerMoved?.(camera.position);
+
+    // ── multiplayer sync ──
+    if (isMultiplayer && inviteId) {
+      syncTick.current += delta;
+      if (syncTick.current > 0.1) { // 10Hz sync
+        syncTick.current = 0;
+        supabase.channel(`game_${inviteId}`).send({
+          type: "broadcast",
+          event: "player_state",
+          payload: {
+            pos: [camera.position.x, camera.position.y, camera.position.z],
+            action: lastAction.current?.type,
+          }
+        });
+      }
+    }
   });
 
   return <PointerLockControls selector="canvas" />;

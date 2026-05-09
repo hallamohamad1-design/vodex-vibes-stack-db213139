@@ -4,8 +4,8 @@ import { useMemo, useRef } from "react";
 import { PlayerController } from "@/game/PlayerController";
 import { MirrorMage } from "@/game/MirrorMage";
 
-/** Battleground — PUBG-style: dusty open field, ruined walls, supply crates. */
-export function BattlegroundWorld() {
+/** Battleground — tactical desert world with ruins and supplies. */
+export function BattlegroundWorld({ isMultiplayer, role }: { isMultiplayer?: boolean; role?: string | null }) {
   const playerPos = useRef(new THREE.Vector3(0, 1.7, 8));
 
   const crates = useMemo(

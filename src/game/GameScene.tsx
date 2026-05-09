@@ -1,6 +1,6 @@
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useRef } from "react";
 import { Canvas } from "@react-three/fiber";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { VodexWorld } from "@/game/worlds/VodexWorld";
 import { BattlegroundWorld } from "@/game/worlds/BattlegroundWorld";
 import { VirtualWorld } from "@/game/worlds/VirtualWorld";
@@ -10,6 +10,8 @@ import { EnemyActionFeed } from "@/game/EnemyActionFeed";
 import { useAuth } from "@/hooks/useAuth";
 import { getMageAI } from "@/game/MirrorMageAI";
 import { loadMemory, saveMemory, saveStats, logEvent } from "@/game/memoryPersistence";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import type { WorldId } from "@/game/types";
 
 interface Props { worldId: WorldId; }
@@ -24,8 +26,14 @@ const META: Record<WorldId, { name: string; hint: string; color: string; next: W
 export function GameScene({ worldId }: Props) {
   const [locked, setLocked] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(180); // 3 minutes in seconds
+  const [searchParams] = useSearchParams();
+  const isMultiplayer = searchParams.get("multiplayer") === "true";
+  const role = searchParams.get("role");
+  const inviteId = searchParams.get("inviteId");
   const m = META[worldId];
   const { user } = useAuth();
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load memory once per world/user
   useEffect(() => {
@@ -53,23 +61,79 @@ export function GameScene({ worldId }: Props) {
     };
   }, [user, worldId, hydrated]);
 
+  // Round Timer Logic
+  useEffect(() => {
+    if (locked && timeLeft > 0) {
+      timerRef.current = setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev <= 1) {
+            clearInterval(timerRef.current!);
+            setLocked(false);
+            toast.info("Round finished! Synchronization complete.");
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [locked]);
+
+  // Multiplayer Logic
+  useEffect(() => {
+    if (!isMultiplayer || !user || !inviteId) return;
+
+    // Realtime sync channel
+    const channel = supabase.channel(`game_${inviteId}`);
+    
+    channel.on("broadcast", { event: "player_state" }, (payload) => {
+      // Sync other player position/animation here if implemented in the world component
+      console.log("Peer state received:", payload);
+    }).subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isMultiplayer, inviteId, user]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   return (
     <div className="fixed inset-0 bg-background">
       <Canvas
         shadows
         camera={{ fov: 75, near: 0.1, far: 200, position: [0, 1.7, 8] }}
-        onPointerDown={() => setLocked(true)}
+        onPointerDown={() => { if (timeLeft > 0) setLocked(true); }}
       >
         <Suspense fallback={null}>
-          {worldId === "vodex"        && <VodexWorld />}
-          {worldId === "battleground" && <BattlegroundWorld />}
-          {worldId === "virtual"      && <VirtualWorld />}
-          {worldId === "blockworld"   && <BlockWorld />}
+          {worldId === "vodex"        && <VodexWorld isMultiplayer={isMultiplayer} role={role} inviteId={inviteId} />}
+          {worldId === "battleground" && <BattlegroundWorld isMultiplayer={isMultiplayer} role={role} inviteId={inviteId} />}
+          {worldId === "virtual"      && <VirtualWorld isMultiplayer={isMultiplayer} role={role} inviteId={inviteId} />}
+          {worldId === "blockworld"   && <BlockWorld isMultiplayer={isMultiplayer} role={role} inviteId={inviteId} />}
         </Suspense>
       </Canvas>
 
       <MemoryHUD worldId={worldId} />
       <EnemyActionFeed worldId={worldId} />
+
+      {/* Timer Overlay */}
+      <div className="pointer-events-none absolute top-20 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1">
+        <div className="panel px-4 py-1 bg-black/40 backdrop-blur-md border-primary/30 flex items-center gap-3">
+          <span className="font-mono text-[10px] tracking-widest text-primary/60 uppercase">Sync Remaining</span>
+          <span className={`font-title text-2xl tracking-widest ${timeLeft < 30 ? "text-red-500 animate-pulse" : "text-primary text-glow-cyan"}`}>
+            {formatTime(timeLeft)}
+          </span>
+        </div>
+        {isMultiplayer && (
+          <div className="px-2 py-0.5 bg-secondary/20 border border-secondary/40 rounded text-[8px] font-mono text-secondary uppercase tracking-[2px]">
+            Multiplayer Active · {role}
+          </div>
+        )}
+      </div>
 
       <div className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 z-20 text-center">
         <h1 className={`font-title text-lg sm:text-2xl tracking-[0.4em] ${m.color}`}>
@@ -96,36 +160,51 @@ export function GameScene({ worldId }: Props) {
         </Link>
       </div>
 
-      {!locked && (
+      {(!locked || timeLeft === 0) && (
         <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/60 backdrop-blur-sm">
           <div className="panel scanline relative p-6 sm:p-10 text-center max-w-md mx-4 animate-pop-in">
-            <h2 className="font-title text-xl sm:text-2xl tracking-[0.3em] text-primary text-glow-cyan mb-2">
-              CLICK TO ENTER
+            <h2 className="font-title text-xl sm:text-2xl tracking-[0.3em] text-primary text-glow-cyan mb-2 uppercase">
+              {timeLeft === 0 ? "Session Expired" : "Ready for Sync"}
             </h2>
             <p className="font-mono text-xs text-muted-foreground mb-4">
-              Pointer-lock first-person controls. Press ESC to release.
+              {timeLeft === 0 
+                ? "The neural link has been severed. Return to Hub to re-establish connection."
+                : "Pointer-lock first-person controls. Press ESC to release."}
             </p>
-            <ul className="font-mono text-[11px] text-foreground/90 grid grid-cols-2 gap-x-4 gap-y-1 text-left mb-6">
-              <li><span className="text-primary">WASD</span> move</li>
-              <li><span className="text-primary">Mouse</span> look</li>
-              <li><span className="text-primary">Space</span> jump</li>
-              <li><span className="text-primary">Shift</span> sprint</li>
-              <li><span className="text-accent">J</span> attack</li>
-              <li><span className="text-accent">K</span> block</li>
-              <li><span className="text-secondary">L</span> special</li>
-              <li><span className="text-gold">Q</span> {m.sigs[0]}</li>
-              <li><span className="text-gold">E</span> {m.sigs[1]}</li>
-              <li><span className="text-red-400">R</span> {m.sigs[2]}</li>
-              <li><span className="text-muted-foreground">ESC</span> unlock</li>
-            </ul>
-            <button
-              type="button"
-              onClick={() => setLocked(true)}
-              className="relative w-full py-3 font-title text-[13px] tracking-[3px] font-bold uppercase rounded-md text-background overflow-hidden transition hover:-translate-y-0.5 active:scale-[0.98] shadow-[0_0_20px_rgba(0,240,255,0.45)] hover:shadow-[0_0_40px_rgba(0,240,255,0.7),0_0_80px_rgba(0,240,255,0.3)]"
-              style={{ background: "linear-gradient(135deg, #00b8cc, #00f0ff)" }}
-            >
-              ▶ START
-            </button>
+            
+            {timeLeft > 0 ? (
+              <>
+                <ul className="font-mono text-[11px] text-foreground/90 grid grid-cols-2 gap-x-4 gap-y-1 text-left mb-6">
+                  <li><span className="text-primary">WASD</span> move</li>
+                  <li><span className="text-primary">Mouse</span> look</li>
+                  <li><span className="text-primary">Space</span> jump</li>
+                  <li><span className="text-primary">Shift</span> sprint</li>
+                  <li><span className="text-accent">J</span> attack</li>
+                  <li><span className="text-accent">K</span> block</li>
+                  <li><span className="text-secondary">L</span> special</li>
+                  <li><span className="text-gold">Q</span> {m.sigs[0]}</li>
+                  <li><span className="text-gold">E</span> {m.sigs[1]}</li>
+                  <li><span className="text-red-400">R</span> {m.sigs[2]}</li>
+                  <li><span className="text-muted-foreground">ESC</span> unlock</li>
+                </ul>
+                <button
+                  type="button"
+                  onClick={() => setLocked(true)}
+                  className="relative w-full py-3 font-title text-[13px] tracking-[3px] font-bold uppercase rounded-md text-background overflow-hidden transition hover:-translate-y-0.5 active:scale-[0.98] shadow-[0_0_20px_rgba(0,240,255,0.45)] hover:shadow-[0_0_40px_rgba(0,240,255,0.7),0_0_80px_rgba(0,240,255,0.3)]"
+                  style={{ background: "linear-gradient(135deg, #00b8cc, #00f0ff)" }}
+                >
+                  ▶ START SYNC
+                </button>
+              </>
+            ) : (
+              <Link
+                to="/lobby"
+                className="relative block w-full py-3 font-title text-[13px] tracking-[3px] font-bold uppercase rounded-md text-center text-foreground overflow-hidden transition hover:-translate-y-0.5 active:scale-[0.98] shadow-[0_0_20px_rgba(191,0,255,0.45)]"
+                style={{ background: "linear-gradient(135deg, #7b00cc, #bf00ff)" }}
+              >
+                ↩ BACK TO LOBBY
+              </Link>
+            )}
           </div>
         </div>
       )}

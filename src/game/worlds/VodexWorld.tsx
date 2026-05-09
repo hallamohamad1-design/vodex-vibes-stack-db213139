@@ -1,14 +1,36 @@
 import { Stars } from "@react-three/drei";
 import * as THREE from "three";
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import { PlayerController } from "@/game/PlayerController";
 import { MirrorMage } from "@/game/MirrorMage";
+import { supabase } from "@/integrations/supabase/client";
+import type { CounterAction } from "@/game/types";
 
 /** Vodex Realm — neon grid + cyan voids, the original world (improved). */
-export function VodexWorld() {
+export function VodexWorld({ isMultiplayer, role, inviteId }: { isMultiplayer?: boolean; role?: string | null; inviteId?: string | null }) {
   const playerPos = useRef(new THREE.Vector3(0, 1.7, 8));
+  const remotePos = useRef(new THREE.Vector3(6, 1.5, -6));
+  const [remoteAction, setRemoteAction] = useState<CounterAction>("ATTACK");
   const grid = useRef<THREE.GridHelper>(null);
+
+  useEffect(() => {
+    if (!isMultiplayer || !inviteId) return;
+
+    const channel = supabase.channel(`game_${inviteId}`);
+    channel.on("broadcast", { event: "player_state" }, (payload) => {
+      if (payload.payload.pos) {
+        remotePos.current.set(payload.payload.pos[0], payload.payload.pos[1], payload.payload.pos[2]);
+      }
+      if (payload.payload.action) {
+        setRemoteAction(payload.payload.action as CounterAction);
+      }
+    }).subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [isMultiplayer, inviteId]);
+
+  // ... rest of the code ...
 
   // floating obelisks
   const pillars = useMemo(
@@ -69,8 +91,17 @@ export function VodexWorld() {
         worldId="vodex"
         bounds={28}
         onPlayerMoved={(p) => playerPos.current.copy(p)}
+        isMultiplayer={isMultiplayer}
+        inviteId={inviteId}
       />
-      <MirrorMage playerPos={playerPos} worldId="vodex" color="#bf00ff" />
+      <MirrorMage 
+        playerPos={isMultiplayer ? remotePos : playerPos} 
+        worldId="vodex" 
+        color={role === "host" ? "#00f0ff" : "#bf00ff"} 
+        variant={isMultiplayer ? (role === "host" ? "soldier" : "mage") : "mage"}
+        isRemote={isMultiplayer}
+        remoteAction={isMultiplayer ? remoteAction : undefined}
+      />
     </>
   );
 }

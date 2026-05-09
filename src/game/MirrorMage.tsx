@@ -12,13 +12,15 @@ interface Props {
   color?: string;
   variant?: MageVariant;
   onAction?: (a: CounterAction) => void;
+  isRemote?: boolean;
+  remoteAction?: CounterAction;
 }
 
 /**
  * Mirror Mage enemy. Every ~1.2s asks the per-world AI for a counter, then
  * performs a visible move. Regressive (REGRESS/MIMIC) counters flash bright.
  */
-export function MirrorMage({ playerPos, worldId = "vodex", color = "#bf00ff", variant = "mage", onAction }: Props) {
+export function MirrorMage({ playerPos, worldId = "vodex", color = "#bf00ff", variant = "mage", onAction, isRemote, remoteAction }: Props) {
   const group = useRef<THREE.Group>(null);
   const orbit = useRef(0);
   const tick = useRef(0);
@@ -37,7 +39,7 @@ export function MirrorMage({ playerPos, worldId = "vodex", color = "#bf00ff", va
     stateT.current += delta;
     orbit.current += delta * 0.4;
 
-    if (tick.current > 1.2) {
+    if (tick.current > 1.2 && !isRemote) {
       tick.current = 0;
       const counter = ai.decide();
       let isRegress = counter === "REGRESS" || counter === "MIMIC";
@@ -52,6 +54,13 @@ export function MirrorMage({ playerPos, worldId = "vodex", color = "#bf00ff", va
       }
       stateT.current = 0;
       onAction?.(counter);
+    }
+
+    if (isRemote && remoteAction && remoteAction !== currentAction) {
+      setCurrentAction(remoteAction);
+      const isRegress = remoteAction === "REGRESS" || remoteAction === "MIMIC";
+      setRegressing(isRegress);
+      if (isRegress) setTimeout(() => setRegressing(false), 700);
     }
 
     const target = playerPos.current;

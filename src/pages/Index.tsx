@@ -102,6 +102,13 @@ const Hub = () => {
           desc="Voxel terrain. Cubic trees and sky. A blocky golem golems your every move."
           accent="green"
         />
+        <WorldCard
+          to="/lobby"
+          title="MULTIPLAYER"
+          tag="COMMUNICATIONS · LINK"
+          desc="Enter the neural hub. Chat with other operatives and challenge them to sync."
+          accent="purple"
+        />
       </main>
 
       <section className="relative z-10 mx-auto max-w-5xl px-6 sm:px-10 pb-20">
@@ -129,11 +136,12 @@ const Hub = () => {
 
 function WorldCard({
   to, title, tag, desc, accent,
-}: { to: string; title: string; tag: string; desc: string; accent: "cyan" | "gold" | "green" }) {
+}: { to: string; title: string; tag: string; desc: string; accent: "cyan" | "gold" | "green" | "purple" }) {
   const map = {
     cyan:  { hover: "hover:box-glow-cyan border-primary/30 hover:border-primary",   text: "text-primary text-glow-cyan" },
     gold:  { hover: "hover:shadow-[0_0_20px_hsl(33_100%_50%/0.5)] border-orange/40 hover:border-orange", text: "text-orange text-glow-gold" },
     green: { hover: "hover:shadow-[0_0_20px_hsl(152_100%_50%/0.5)] border-green/40 hover:border-green",  text: "text-green text-glow-gold" },
+    purple: { hover: "hover:box-glow-purple border-secondary/30 hover:border-secondary", text: "text-secondary text-glow-purple" },
   }[accent];
   return (
     <Link to={to} className={`panel scanline relative p-6 transition group ${map.hover}`}>
