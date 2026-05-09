@@ -1,6 +1,6 @@
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useRef, useState } from "react";
-import { Text } from "@react-three/drei";
+// import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import { getMageAI } from "@/game/MirrorMageAI";
 import type { CounterAction, WorldId } from "@/game/types";
