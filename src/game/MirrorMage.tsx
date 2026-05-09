@@ -1,32 +1,35 @@
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-import { mageAI } from "@/game/MirrorMageAI";
-import type { CounterAction } from "@/game/types";
+import { getMageAI } from "@/game/MirrorMageAI";
+import type { CounterAction, WorldId } from "@/game/types";
 
 export type MageVariant = "mage" | "soldier" | "ghost" | "golem";
 
 interface Props {
   playerPos: React.MutableRefObject<THREE.Vector3>;
+  worldId?: WorldId;
   color?: string;
   variant?: MageVariant;
   onAction?: (a: CounterAction) => void;
 }
 
 /**
- * Mirror Mage enemy. Every ~1.2s it asks the AI engine to decide a counter
- * based on the queue's predicted player action, then performs a visible move.
+ * Mirror Mage enemy. Every ~1.2s asks the per-world AI for a counter, then
+ * performs a visible move. Regressive (REGRESS/MIMIC) counters flash bright.
  */
-export function MirrorMage({ playerPos, color = "#bf00ff", variant = "mage", onAction }: Props) {
+export function MirrorMage({ playerPos, worldId = "vodex", color = "#bf00ff", variant = "mage", onAction }: Props) {
   const group = useRef<THREE.Group>(null);
   const orbit = useRef(0);
   const tick = useRef(0);
   const [currentAction, setCurrentAction] = useState<CounterAction>("ATTACK");
+  const [regressing, setRegressing] = useState(false);
   const stateT = useRef(0);
+  const ai = getMageAI(worldId);
 
   useEffect(() => {
     if (group.current) group.current.position.set(6, 1.5, -6);
-  }, []);
+  }, [worldId]);
 
   useFrame((_, delta) => {
     if (!group.current) return;
@@ -34,13 +37,19 @@ export function MirrorMage({ playerPos, color = "#bf00ff", variant = "mage", onA
     stateT.current += delta;
     orbit.current += delta * 0.4;
 
-    // Decide a new counter every 1.2s
     if (tick.current > 1.2) {
       tick.current = 0;
-      const counter = mageAI.decide();
-      // Occasionally deploy a stored signature move from the stack
-      if (Math.random() < 0.25) mageAI.deploySignature();
+      const counter = ai.decide();
+      let isRegress = counter === "REGRESS" || counter === "MIMIC";
+      if (Math.random() < 0.3) {
+        const sig = ai.deploySignature();
+        if (sig) isRegress = true;
+      }
       setCurrentAction(counter);
+      setRegressing(isRegress);
+      if (isRegress) {
+        setTimeout(() => setRegressing(false), 700);
+      }
       stateT.current = 0;
       onAction?.(counter);
     }
@@ -52,7 +61,6 @@ export function MirrorMage({ playerPos, color = "#bf00ff", variant = "mage", onA
     toPlayer.y = 0;
     toPlayer.normalize();
 
-    // Behavior per counter
     let speed = 1.2;
     let bobAmp = 0.15;
     switch (currentAction) {
@@ -61,6 +69,8 @@ export function MirrorMage({ playerPos, color = "#bf00ff", variant = "mage", onA
       case "DODGE":     speed = 0.6; bobAmp = 0.4; break;
       case "PARRY":     speed = 0.4; break;
       case "SPECIAL":   speed = 1.6; bobAmp = 0.6; break;
+      case "REGRESS":   speed = 2.6; bobAmp = 0.8; break;
+      case "MIMIC":     speed = 1.8; bobAmp = 0.5; break;
     }
 
     if (dist > 3) me.addScaledVector(toPlayer, speed * delta);
@@ -69,28 +79,28 @@ export function MirrorMage({ playerPos, color = "#bf00ff", variant = "mage", onA
       me.addScaledVector(side, 2.5 * delta);
     }
 
-    // hover / orbit motion
     me.y = 1.5 + Math.sin(orbit.current * 4) * bobAmp;
     me.x = THREE.MathUtils.clamp(me.x, -28, 28);
     me.z = THREE.MathUtils.clamp(me.z, -28, 28);
 
-    // face the player
     const lookAt = new THREE.Vector3(target.x, me.y, target.z);
     group.current.lookAt(lookAt);
   });
 
-  // Color shift based on current action
-  const bodyColor =
+  const bodyColor = regressing ? "#ff0040" :
     currentAction === "ATTACK" ? "#ff3a6e" :
     currentAction === "DODGE"  ? "#00f0ff" :
     currentAction === "PARRY"  ? "#ffd700" :
     currentAction === "SPECIAL" ? "#00ff88" :
+    currentAction === "REGRESS" ? "#ff0040" :
+    currentAction === "MIMIC"   ? "#ff66ff" :
     color;
+
+  const glowIntensity = regressing ? 6 : 3;
 
   return (
     <group ref={group}>
       {variant === "soldier" ? (
-        // Tactical silhouette: torso + head + helmet visor
         <group>
           <mesh castShadow position={[0, 0, 0]}>
             <boxGeometry args={[0.9, 1.1, 0.5]} />
@@ -106,7 +116,6 @@ export function MirrorMage({ playerPos, color = "#bf00ff", variant = "mage", onA
           </mesh>
         </group>
       ) : variant === "ghost" ? (
-        // Glitch ghost: wireframe icosa + inner glow core
         <group>
           <mesh>
             <icosahedronGeometry args={[0.95, 1]} />
@@ -118,7 +127,6 @@ export function MirrorMage({ playerPos, color = "#bf00ff", variant = "mage", onA
           </mesh>
         </group>
       ) : variant === "golem" ? (
-        // Blocky golem: stacked cubes
         <group>
           <mesh castShadow position={[0, -0.4, 0]}>
             <boxGeometry args={[1.1, 0.9, 0.7]} />
@@ -138,20 +146,19 @@ export function MirrorMage({ playerPos, color = "#bf00ff", variant = "mage", onA
           </mesh>
         </group>
       ) : (
-        // Default mage: icosa + halo + shards
         <>
           <mesh castShadow>
             <icosahedronGeometry args={[0.7, 1]} />
             <meshStandardMaterial
               color={bodyColor}
               emissive={bodyColor}
-              emissiveIntensity={1.2}
+              emissiveIntensity={1.2 + (regressing ? 2 : 0)}
               roughness={0.2}
               metalness={0.6}
             />
           </mesh>
           <mesh rotation={[Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[1.2, 0.04, 12, 64]} />
+            <torusGeometry args={[regressing ? 1.6 : 1.2, 0.04, 12, 64]} />
             <meshBasicMaterial color={bodyColor} transparent opacity={0.7} />
           </mesh>
           {[0, 1, 2].map(i => (
@@ -162,7 +169,7 @@ export function MirrorMage({ playerPos, color = "#bf00ff", variant = "mage", onA
           ))}
         </>
       )}
-      <pointLight color={bodyColor} intensity={3} distance={14} />
+      <pointLight color={bodyColor} intensity={glowIntensity} distance={regressing ? 22 : 14} />
     </group>
   );
 }
