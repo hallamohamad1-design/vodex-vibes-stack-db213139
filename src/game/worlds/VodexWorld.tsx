@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { CounterAction } from "@/game/types";
 
 /** Vodex Realm — neon grid + cyan voids, the original world (improved). */
-export function VodexWorld({ isMultiplayer, role, inviteId }: { isMultiplayer?: boolean; role?: string | null; inviteId?: string | null }) {
+export function VodexWorld({ isMultiplayer, role, inviteId, peerName }: { isMultiplayer?: boolean; role?: string | null; inviteId?: string | null; peerName?: string | null }) {
   const playerPos = useRef(new THREE.Vector3(0, 1.7, 8));
   const remotePos = useRef(new THREE.Vector3(6, 1.5, -6));
   const [remoteAction, setRemoteAction] = useState<CounterAction>("ATTACK");
@@ -29,8 +29,6 @@ export function VodexWorld({ isMultiplayer, role, inviteId }: { isMultiplayer?: 
 
     return () => { supabase.removeChannel(channel); };
   }, [isMultiplayer, inviteId]);
-
-  // ... rest of the code ...
 
   // floating obelisks
   const pillars = useMemo(
@@ -101,6 +99,7 @@ export function VodexWorld({ isMultiplayer, role, inviteId }: { isMultiplayer?: 
         variant={isMultiplayer ? (role === "host" ? "soldier" : "mage") : "mage"}
         isRemote={isMultiplayer}
         remoteAction={isMultiplayer ? remoteAction : undefined}
+        name={isMultiplayer ? peerName || "Operative" : undefined}
       />
     </>
   );

@@ -1,14 +1,28 @@
 import { Stars } from "@react-three/drei";
 import * as THREE from "three";
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import { PlayerController } from "@/game/PlayerController";
 import { MirrorMage } from "@/game/MirrorMage";
+import { supabase } from "@/integrations/supabase/client";
+import type { CounterAction } from "@/game/types";
 
-/** Virtual — pure cyberspace: floating data platforms, holo wireframes, scanlines. */
-export function VirtualWorld({ isMultiplayer, role }: { isMultiplayer?: boolean; role?: string | null }) {
+/** Virtual Core — cyber grid world with floating data platforms. */
+export function VirtualWorld({ isMultiplayer, role, inviteId, peerName }: { isMultiplayer?: boolean; role?: string | null; inviteId?: string | null; peerName?: string | null }) {
   const playerPos = useRef(new THREE.Vector3(0, 1.7, 8));
+  const remotePos = useRef(new THREE.Vector3(6, 1.5, -6));
+  const [remoteAction, setRemoteAction] = useState<CounterAction>("ATTACK");
   const platformsRef = useRef<THREE.Group>(null);
+
+  useEffect(() => {
+    if (!isMultiplayer || !inviteId) return;
+    const channel = supabase.channel(`game_${inviteId}`);
+    channel.on("broadcast", { event: "player_state" }, (payload) => {
+      if (payload.payload.pos) remotePos.current.set(payload.payload.pos[0], payload.payload.pos[1], payload.payload.pos[2]);
+      if (payload.payload.action) setRemoteAction(payload.payload.action as CounterAction);
+    }).subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [isMultiplayer, inviteId]);
 
   const platforms = useMemo(
     () => Array.from({ length: 14 }).map((_, i) => {
@@ -84,8 +98,22 @@ export function VirtualWorld({ isMultiplayer, role }: { isMultiplayer?: boolean;
         </mesh>
       ))}
 
-      <PlayerController worldId="virtual" bounds={45} onPlayerMoved={(p) => playerPos.current.copy(p)} />
-      <MirrorMage playerPos={playerPos} worldId="virtual" color="#ff00aa" variant="ghost" />
+      <PlayerController 
+        worldId="virtual" 
+        bounds={45} 
+        onPlayerMoved={(p) => playerPos.current.copy(p)} 
+        isMultiplayer={isMultiplayer}
+        inviteId={inviteId}
+      />
+      <MirrorMage 
+        playerPos={isMultiplayer ? remotePos : playerPos} 
+        worldId="virtual" 
+        color={role === "host" ? "#00ffd0" : "#ff00aa"} 
+        variant={isMultiplayer ? (role === "host" ? "ghost" : "mage") : "ghost"} 
+        isRemote={isMultiplayer}
+        remoteAction={isMultiplayer ? remoteAction : undefined}
+        name={isMultiplayer ? peerName || "Operative" : undefined}
+      />
     </>
   );
 }

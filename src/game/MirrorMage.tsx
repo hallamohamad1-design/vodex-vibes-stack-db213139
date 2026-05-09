@@ -1,5 +1,6 @@
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useRef, useState } from "react";
+import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import { getMageAI } from "@/game/MirrorMageAI";
 import type { CounterAction, WorldId } from "@/game/types";
@@ -14,13 +15,14 @@ interface Props {
   onAction?: (a: CounterAction) => void;
   isRemote?: boolean;
   remoteAction?: CounterAction;
+  name?: string;
 }
 
 /**
  * Mirror Mage enemy. Every ~1.2s asks the per-world AI for a counter, then
  * performs a visible move. Regressive (REGRESS/MIMIC) counters flash bright.
  */
-export function MirrorMage({ playerPos, worldId = "vodex", color = "#bf00ff", variant = "mage", onAction, isRemote, remoteAction }: Props) {
+export function MirrorMage({ playerPos, worldId = "vodex", color = "#bf00ff", variant = "mage", onAction, isRemote, remoteAction, name }: Props) {
   const group = useRef<THREE.Group>(null);
   const orbit = useRef(0);
   const tick = useRef(0);
@@ -33,7 +35,7 @@ export function MirrorMage({ playerPos, worldId = "vodex", color = "#bf00ff", va
     if (group.current) group.current.position.set(6, 1.5, -6);
   }, [worldId]);
 
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     if (!group.current) return;
     tick.current += delta;
     stateT.current += delta;
@@ -109,6 +111,18 @@ export function MirrorMage({ playerPos, worldId = "vodex", color = "#bf00ff", va
 
   return (
     <group ref={group}>
+      {name && (
+        <Text
+          position={[0, 1.8, 0]}
+          fontSize={0.25}
+          color={bodyColor}
+          font="/fonts/Inter-Bold.woff" // Assuming Inter is available or fallback
+          anchorX="center"
+          anchorY="middle"
+        >
+          {name.toUpperCase()}
+        </Text>
+      )}
       {variant === "soldier" ? (
         <group>
           <mesh castShadow position={[0, 0, 0]}>

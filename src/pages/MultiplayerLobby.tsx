@@ -70,10 +70,12 @@ export default function MultiplayerLobby() {
         setInvites(prev => [...prev, { ...payload.new, sender_username: sender?.username } as any]);
         toast.info(`Game invitation from ${sender?.username}!`);
       })
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "game_invites", filter: `sender_id=eq.${user.id}` }, (payload) => {
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "game_invites", filter: `sender_id=eq.${user.id}` }, async (payload) => {
         if (payload.new.status === "accepted") {
           toast.success("Invitation accepted! Starting game...");
-          navigate(`/play/${payload.new.world}?multiplayer=true&role=host&inviteId=${payload.new.id}`);
+          // For host, we need to know who accepted.
+          const { data: recipient } = await supabase.from("profiles").select("username").eq("user_id", payload.new.recipient_id).single();
+          navigate(`/play/${payload.new.world}?multiplayer=true&role=host&inviteId=${payload.new.id}&peerName=${recipient?.username || "Guest"}`);
         }
       })
       .subscribe();
@@ -123,7 +125,7 @@ export default function MultiplayerLobby() {
     const { error } = await supabase.from("game_invites").update({ status: "accepted" }).eq("id", invite.id);
     if (error) toast.error("Failed to accept invite");
     else {
-      navigate(`/play/${invite.world}?multiplayer=true&role=guest&inviteId=${invite.id}`);
+      navigate(`/play/${invite.world}?multiplayer=true&role=guest&inviteId=${invite.id}&peerName=${invite.sender_username}`);
     }
   };
 

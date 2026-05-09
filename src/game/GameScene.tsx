@@ -21,9 +21,7 @@ const META: Record<WorldId, { name: string; hint: string; color: string; next: W
   battleground: { name: "BATTLEGROUND",  hint: "Tactical sands · ruined walls",    color: "text-orange text-glow-gold",   next: "virtual",      sigs: ["GRENADE", "SNIPE", "KILL"] },
   virtual:      { name: "VIRTUAL CORE",  hint: "Cyber data · holo wireframes",     color: "text-primary text-glow-cyan",  next: "blockworld",   sigs: ["GLITCH", "REWIND", "KILL"] },
   blockworld:   { name: "BLOCKWORLD",    hint: "Voxel terrain · blocky golem",     color: "text-green text-glow-gold",    next: "vodex",        sigs: ["MINE", "BUILD", "KILL"] },
-};
-
-export function GameScene({ worldId }: Props) {
+};export function GameScene({ worldId }: Props) {
   const [locked, setLocked] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [timeLeft, setTimeLeft] = useState(180); // 3 minutes in seconds
@@ -31,9 +29,14 @@ export function GameScene({ worldId }: Props) {
   const isMultiplayer = searchParams.get("multiplayer") === "true";
   const role = searchParams.get("role");
   const inviteId = searchParams.get("inviteId");
+  const peerName = searchParams.get("peerName");
   const m = META[worldId];
   const { user } = useAuth();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const [gameMessages, setGameMessages] = useState<{user: string, text: string}[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [showChat, setShowChat] = useState(false);
 
   // Load memory once per world/user
   useEffect(() => {
@@ -83,18 +86,48 @@ export function GameScene({ worldId }: Props) {
   useEffect(() => {
     if (!isMultiplayer || !user || !inviteId) return;
 
-    // Realtime sync channel
     const channel = supabase.channel(`game_${inviteId}`);
     
     channel.on("broadcast", { event: "player_state" }, (payload) => {
-      // Sync other player position/animation here if implemented in the world component
-      console.log("Peer state received:", payload);
+      // already handled in world components
+    }).on("broadcast", { event: "chat" }, (payload) => {
+      setGameMessages(prev => [...prev.slice(-10), payload.payload]);
     }).subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, [isMultiplayer, inviteId, user]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Enter") {
+        if (showChat) {
+          sendGameChat();
+        } else if (locked) {
+          setShowChat(true);
+        }
+      }
+      if (e.key === "Escape" && showChat) {
+        setShowChat(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showChat, locked, chatInput]);
+
+  const sendGameChat = () => {
+    if (!chatInput.trim() || !inviteId) return;
+    const msg = { user: user?.email?.split("@")[0] || "Operative", text: chatInput.trim() };
+    supabase.channel(`game_${inviteId}`).send({
+      type: "broadcast",
+      event: "chat",
+      payload: msg
+    });
+    setGameMessages(prev => [...prev.slice(-10), msg]);
+    setChatInput("");
+    setShowChat(false);
+  };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -107,13 +140,13 @@ export function GameScene({ worldId }: Props) {
       <Canvas
         shadows
         camera={{ fov: 75, near: 0.1, far: 200, position: [0, 1.7, 8] }}
-        onPointerDown={() => { if (timeLeft > 0) setLocked(true); }}
+        onPointerDown={() => { if (timeLeft > 0 && !showChat) setLocked(true); }}
       >
         <Suspense fallback={null}>
-          {worldId === "vodex"        && <VodexWorld isMultiplayer={isMultiplayer} role={role} inviteId={inviteId} />}
-          {worldId === "battleground" && <BattlegroundWorld isMultiplayer={isMultiplayer} role={role} inviteId={inviteId} />}
-          {worldId === "virtual"      && <VirtualWorld isMultiplayer={isMultiplayer} role={role} inviteId={inviteId} />}
-          {worldId === "blockworld"   && <BlockWorld isMultiplayer={isMultiplayer} role={role} inviteId={inviteId} />}
+          {worldId === "vodex"        && <VodexWorld isMultiplayer={isMultiplayer} role={role} inviteId={inviteId} peerName={peerName} />}
+          {worldId === "battleground" && <BattlegroundWorld isMultiplayer={isMultiplayer} role={role} inviteId={inviteId} peerName={peerName} />}
+          {worldId === "virtual"      && <VirtualWorld isMultiplayer={isMultiplayer} role={role} inviteId={inviteId} peerName={peerName} />}
+          {worldId === "blockworld"   && <BlockWorld isMultiplayer={isMultiplayer} role={role} inviteId={inviteId} peerName={peerName} />}
         </Suspense>
       </Canvas>
 
@@ -134,6 +167,36 @@ export function GameScene({ worldId }: Props) {
           </div>
         )}
       </div>
+
+      {/* In-Game Chat Overlay */}
+      {isMultiplayer && (
+        <div className="absolute bottom-6 left-6 z-40 w-80 pointer-events-none">
+          <div className="flex flex-col gap-1 mb-4">
+            {gameMessages.map((m, i) => (
+              <div key={i} className="animate-slide-in bg-black/40 backdrop-blur-sm border-l-2 border-primary/40 p-2 rounded-r">
+                <span className="font-mono text-[10px] font-bold text-primary mr-2">{m.user}:</span>
+                <span className="font-mono text-[11px] text-white/90">{m.text}</span>
+              </div>
+            ))}
+          </div>
+          {showChat && (
+            <div className="pointer-events-auto flex gap-2">
+              <input
+                autoFocus
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                placeholder="Secure channel message..."
+                className="flex-1 bg-black/60 border border-primary/40 rounded px-3 py-1.5 font-mono text-xs text-primary focus:border-primary outline-none"
+              />
+              <button onClick={sendGameChat} className="bg-primary/20 hover:bg-primary/40 text-primary border border-primary/40 px-3 py-1 rounded font-title text-[10px] tracking-widest">SEND</button>
+            </div>
+          )}
+          {!showChat && locked && (
+            <div className="font-mono text-[9px] text-muted-foreground animate-pulse">PRESS [ENTER] TO CHAT</div>
+          )}
+        </div>
+      )}
 
       <div className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 z-20 text-center">
         <h1 className={`font-title text-lg sm:text-2xl tracking-[0.4em] ${m.color}`}>

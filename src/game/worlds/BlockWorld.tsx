@@ -1,12 +1,26 @@
 import { Sky } from "@react-three/drei";
 import * as THREE from "three";
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { PlayerController } from "@/game/PlayerController";
 import { MirrorMage } from "@/game/MirrorMage";
+import { supabase } from "@/integrations/supabase/client";
+import type { CounterAction } from "@/game/types";
 
 /** Blockworld — Minecraft-style voxel terrain with blocky trees. */
-export function BlockWorld({ isMultiplayer, role }: { isMultiplayer?: boolean; role?: string | null }) {
+export function BlockWorld({ isMultiplayer, role, inviteId, peerName }: { isMultiplayer?: boolean; role?: string | null; inviteId?: string | null; peerName?: string | null }) {
   const playerPos = useRef(new THREE.Vector3(0, 1.7, 8));
+  const remotePos = useRef(new THREE.Vector3(6, 1.5, -6));
+  const [remoteAction, setRemoteAction] = useState<CounterAction>("ATTACK");
+
+  useEffect(() => {
+    if (!isMultiplayer || !inviteId) return;
+    const channel = supabase.channel(`game_${inviteId}`);
+    channel.on("broadcast", { event: "player_state" }, (payload) => {
+      if (payload.payload.pos) remotePos.current.set(payload.payload.pos[0], payload.payload.pos[1], payload.payload.pos[2]);
+      if (payload.payload.action) setRemoteAction(payload.payload.action as CounterAction);
+    }).subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [isMultiplayer, inviteId]);
 
   // generate a small heightmap of grass blocks
   const blocks = useMemo(() => {
@@ -92,8 +106,22 @@ export function BlockWorld({ isMultiplayer, role }: { isMultiplayer?: boolean; r
         </group>
       ))}
 
-      <PlayerController worldId="blockworld" bounds={28} onPlayerMoved={(p) => playerPos.current.copy(p)} />
-      <MirrorMage playerPos={playerPos} worldId="blockworld" color="#8b4513" variant="golem" />
+      <PlayerController 
+        worldId="blockworld" 
+        bounds={28} 
+        onPlayerMoved={(p) => playerPos.current.copy(p)} 
+        isMultiplayer={isMultiplayer}
+        inviteId={inviteId}
+      />
+      <MirrorMage 
+        playerPos={isMultiplayer ? remotePos : playerPos} 
+        worldId="blockworld" 
+        color={role === "host" ? "#8b4513" : "#4b2513"} 
+        variant={isMultiplayer ? (role === "host" ? "golem" : "mage") : "golem"} 
+        isRemote={isMultiplayer}
+        remoteAction={isMultiplayer ? remoteAction : undefined}
+        name={isMultiplayer ? peerName || "Operative" : undefined}
+      />
     </>
   );
 }
