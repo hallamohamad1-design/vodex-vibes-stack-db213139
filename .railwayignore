@@ -1,0 +1,8 @@
+# Files Railway doesn't need to upload
+.git
+.github
+.lovable
+*.webp
+*.png
+bun.lock
+bun.lockb
