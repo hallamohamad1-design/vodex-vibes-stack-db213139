@@ -20,7 +20,7 @@ export interface Action {
   world: WorldId;
 }
 
-export type WorldId = "vodex" | "battleground" | "virtual" | "blockworld";
+export type WorldId = "vodex" | "battleground" | "virtual" | "blockworld" | "minecraft";
 
 export type CounterAction =
   | "DODGE" | "PARRY" | "INTERCEPT" | "SPECIAL" | "ATTACK"
@@ -91,4 +91,40 @@ export interface GameHistoryEntry {
   source: "queue" | "stack";
   is_signature: boolean;
   created_at: string;
+  stack_order?: number;
+  queue_order?: number;
+}
+
+/** Game session for multiplayer matches */
+export interface GameSession {
+  id: string;
+  invite_id: string | null;
+  world: WorldId;
+  host_id: string;
+  guest_id: string | null;
+  status: "active" | "completed" | "expired";
+  started_at: string;
+  ended_at: string | null;
+  round_duration_seconds: number;
+  host_score: number;
+  guest_score: number;
+  winner_id: string | null;
+  created_at: string;
+}
+
+/** Block in Minecraft/Blockworld */
+export interface WorldBlock {
+  id: string;
+  session_id: string | null;
+  player_id: string;
+  world: WorldId;
+  x: number;
+  y: number;
+  z: number;
+  block_type: string;
+  color: string;
+  placed_at: string;
+  is_removed: boolean;
+  removed_at: string | null;
+  removed_by: string | null;
 }

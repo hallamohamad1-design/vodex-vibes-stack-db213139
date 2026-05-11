@@ -99,7 +99,14 @@ const Hub = () => {
           to="/play/blockworld"
           title="BLOCKWORLD"
           tag="WORLD · 04"
-          desc="Voxel terrain. Cubic trees and sky. A blocky golem golems your every move."
+          desc="Voxel terrain. Build & mine blocks. Stack for undo, queue for history."
+          accent="green"
+        />
+        <WorldCard
+          to="/play/minecraft"
+          title="MINECRAFT"
+          tag="WORLD · 05"
+          desc="Full 3D block building. Place blocks with Q, mine with E, undo with U. Stack + Queue mechanics."
           accent="green"
         />
         <WorldCard

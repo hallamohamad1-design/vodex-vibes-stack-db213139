@@ -5,6 +5,7 @@ import { VodexWorld } from "@/game/worlds/VodexWorld";
 import { BattlegroundWorld } from "@/game/worlds/BattlegroundWorld";
 import { VirtualWorld } from "@/game/worlds/VirtualWorld";
 import { BlockWorld } from "@/game/worlds/BlockWorld";
+import { MinecraftWorld } from "@/game/worlds/MinecraftWorld";
 import { MemoryHUD } from "@/game/MemoryHUD";
 import { EnemyActionFeed } from "@/game/EnemyActionFeed";
 import { GameHistoryPanel } from "@/game/GameHistoryPanel";
@@ -21,7 +22,8 @@ const META: Record<WorldId, { name: string; hint: string; color: string; next: W
   vodex:        { name: "VODEX REALM",   hint: "Neon grid · cyan obelisks",        color: "text-primary text-glow-cyan",  next: "battleground", sigs: ["HACK", "OVERLOAD", "KILL"] },
   battleground: { name: "BATTLEGROUND",  hint: "Tactical sands · ruined walls",    color: "text-orange text-glow-gold",   next: "virtual",      sigs: ["GRENADE", "SNIPE", "KILL"] },
   virtual:      { name: "VIRTUAL CORE",  hint: "Cyber data · holo wireframes",     color: "text-primary text-glow-cyan",  next: "blockworld",   sigs: ["GLITCH", "REWIND", "KILL"] },
-  blockworld:   { name: "BLOCKWORLD",    hint: "Voxel terrain · blocky golem",     color: "text-green text-glow-gold",    next: "vodex",        sigs: ["MINE", "BUILD", "KILL"] },
+  blockworld:   { name: "BLOCKWORLD",    hint: "Voxel terrain · build & mine",     color: "text-green text-glow-gold",    next: "minecraft",    sigs: ["MINE", "BUILD", "KILL"] },
+  minecraft:    { name: "MINECRAFT",     hint: "3D blocks · stack undo · queue history", color: "text-green text-glow-gold", next: "vodex", sigs: ["MINE", "BUILD", "REWIND"] },
 };
 
 // Persist a single action to the game_history table and broadcast it
@@ -195,6 +197,7 @@ export function GameScene({ worldId }: Props) {
           {worldId === "battleground" && <BattlegroundWorld isMultiplayer={isMultiplayer} role={role} inviteId={inviteId} peerName={peerName} />}
           {worldId === "virtual"      && <VirtualWorld isMultiplayer={isMultiplayer} role={role} inviteId={inviteId} peerName={peerName} />}
           {worldId === "blockworld"   && <BlockWorld isMultiplayer={isMultiplayer} role={role} inviteId={inviteId} peerName={peerName} />}
+          {worldId === "minecraft"    && <MinecraftWorld isMultiplayer={isMultiplayer} role={role} inviteId={inviteId} peerName={peerName} userId={user?.id} username={username} />}
         </Suspense>
       </Canvas>
 

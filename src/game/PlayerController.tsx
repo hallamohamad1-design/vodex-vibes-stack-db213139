@@ -20,6 +20,7 @@ const WORLD_SIGNATURES: Record<WorldId, [ActionType, ActionType, ActionType]> = 
   battleground: ["GRENADE", "SNIPE", "KILL"],
   virtual:      ["GLITCH", "REWIND", "KILL"],
   blockworld:   ["MINE", "BUILD", "KILL"],
+  minecraft:    ["MINE", "BUILD", "REWIND"],
 };
 
 export function PlayerController({ worldId, onPlayerMoved, bounds = 28, isMultiplayer, inviteId }: Props) {

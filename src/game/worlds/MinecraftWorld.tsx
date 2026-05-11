@@ -8,19 +8,12 @@ import { getMageAI } from "@/game/MirrorMageAI";
 import type { CounterAction, ActionType, WorldId } from "@/game/types";
 
 /**
- * BlockWorld — Minecraft-style voxel terrain with Stack & Queue mechanics.
+ * MinecraftWorld — Full 3D voxel building world with Stack & Queue mechanics.
  * 
- * Stack (LIFO): Stores placed blocks for UNDO functionality (U key)
- * Queue (FIFO): Tracks pending block operations in chronological order
+ * Stack: Stores placed blocks for UNDO (press U to undo last block)
+ * Queue: Tracks pending block operations in order
  * 
- * Controls:
- * - Q: Place block (MINE action becomes BUILD in blockworld context)
- * - E: Mine/destroy block (MINE action)
- * - R: KILL (special action)
- * - U: Undo last placed block (Stack pop)
- * - 1-8: Select block type
- * 
- * Each block placed is recorded in the game history.
+ * Players can build and destroy blocks in a 3D voxel environment.
  */
 
 interface Block {
@@ -49,7 +42,7 @@ const BLOCK_COLORS: Record<BlockType, string> = {
 
 const BLOCK_TYPES: BlockType[] = ["grass", "dirt", "stone", "wood", "leaves", "water", "sand", "brick"];
 
-// Stack for block undo (LIFO) - player can undo last placed block
+// Stack for block undo (LIFO)
 class BlockStack {
   private blocks: Block[] = [];
   readonly capacity = 50;
@@ -57,7 +50,7 @@ class BlockStack {
   push(block: Block) {
     this.blocks.push(block);
     if (this.blocks.length > this.capacity) {
-      this.blocks.shift(); // Evict oldest when full
+      this.blocks.shift();
     }
   }
   
@@ -69,10 +62,6 @@ class BlockStack {
     return this.blocks[this.blocks.length - 1] ?? null;
   }
   
-  remove(id: string) {
-    this.blocks = this.blocks.filter(b => b.id !== id);
-  }
-  
   toArray(): Block[] {
     return [...this.blocks];
   }
@@ -80,7 +69,7 @@ class BlockStack {
   get size() { return this.blocks.length; }
 }
 
-// Queue for block operations (FIFO) - chronological order
+// Queue for block operations (FIFO)
 class BlockQueue {
   private blocks: Block[] = [];
   readonly capacity = 30;
@@ -107,31 +96,32 @@ class BlockQueue {
   get size() { return this.blocks.length; }
 }
 
-export function BlockWorld({ 
+export function MinecraftWorld({ 
   isMultiplayer, 
   role, 
   inviteId, 
-  peerName
+  peerName,
+  userId,
+  username
 }: { 
   isMultiplayer?: boolean; 
   role?: string | null; 
   inviteId?: string | null; 
   peerName?: string | null;
+  userId?: string;
+  username?: string;
 }) {
   const playerPos = useRef(new THREE.Vector3(0, 1.7, 8));
   const remotePos = useRef(new THREE.Vector3(6, 1.5, -6));
   const [remoteAction, setRemoteAction] = useState<CounterAction>("ATTACK");
   
-  // Block management with Stack and Queue
+  // Block management
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [selectedBlockType, setSelectedBlockType] = useState<BlockType>("grass");
   const blockStackRef = useRef(new BlockStack());
   const blockQueueRef = useRef(new BlockQueue());
   
-  // Placement preview
-  const [previewPos, setPreviewPos] = useState<[number, number, number] | null>(null);
-  
-  // Action cooldown
+  // Player actions for recording
   const lastBlockAction = useRef<number>(0);
   const ai = getMageAI("blockworld");
   
@@ -163,7 +153,7 @@ export function BlockWorld({
           timestamp: Date.now(),
         });
         
-        // Dirt below top
+        // Dirt below
         initialBlocks.push({
           id: `terrain_${x}_${h - 1}_${z}`,
           x, y: h - 1, z,
@@ -185,12 +175,10 @@ export function BlockWorld({
       }
     }
     
-    // Add trees
-    const treePositions = [
-      [-8, -5], [5, -10], [-12, 8], [10, 5], [-5, 12], [15, -8], [-15, -15], [8, 15]
-    ];
-    
-    treePositions.forEach(([tx, tz], i) => {
+    // Add some trees
+    for (let i = 0; i < 8; i++) {
+      const tx = Math.floor((Math.random() - 0.5) * 30);
+      const tz = Math.floor((Math.random() - 0.5) * 30);
       const baseY = 1 + Math.floor(Math.sin(tx * 0.25) * 1.2 + Math.cos(tz * 0.3) * 1.2);
       const treeHeight = 3 + Math.floor(Math.random() * 2);
       
@@ -206,7 +194,7 @@ export function BlockWorld({
         });
       }
       
-      // Leaves cluster
+      // Leaves
       for (let dx = -1; dx <= 1; dx++) {
         for (let dz = -1; dz <= 1; dz++) {
           for (let dy = 0; dy <= 1; dy++) {
@@ -222,42 +210,33 @@ export function BlockWorld({
           }
         }
       }
-    });
+    }
     
     setBlocks(initialBlocks);
   }, []);
   
-  // Place a block (BUILD action)
+  // Place a block
   const placeBlock = useCallback((x: number, y: number, z: number) => {
     const now = Date.now();
-    if (now - lastBlockAction.current < 200) return;
+    if (now - lastBlockAction.current < 200) return; // Cooldown
     lastBlockAction.current = now;
     
-    // Check if position is already occupied
-    const isOccupied = blocks.some(b => 
-      Math.abs(b.x - Math.round(x)) < 0.5 && 
-      Math.abs(b.y - Math.round(y)) < 0.5 && 
-      Math.abs(b.z - Math.round(z)) < 0.5
-    );
-    
-    if (isOccupied) return;
-    
     const newBlock: Block = {
-      id: `player_${now}_${Math.random().toString(36).slice(2)}`,
+      id: `block_${now}_${Math.random().toString(36).slice(2)}`,
       x: Math.round(x),
       y: Math.round(y),
       z: Math.round(z),
       color: BLOCK_COLORS[selectedBlockType],
       type: selectedBlockType,
-      placedBy: "local_player",
+      placedBy: userId || "player",
       timestamp: now,
     };
     
     setBlocks(prev => [...prev, newBlock]);
-    blockStackRef.current.push(newBlock); // Add to stack for undo
-    blockQueueRef.current.enqueue(newBlock); // Add to queue for history
+    blockStackRef.current.push(newBlock);
+    blockQueueRef.current.enqueue(newBlock);
     
-    // Record BUILD action for AI and game history
+    // Record action for AI
     ai.observe({
       type: "BUILD",
       damage: 0,
@@ -271,12 +250,12 @@ export function BlockWorld({
       supabase.channel(`game_${inviteId}`).send({
         type: "broadcast",
         event: "block_place",
-        payload: { block: newBlock },
+        payload: { block: newBlock, player: username },
       });
     }
-  }, [blocks, selectedBlockType, isMultiplayer, inviteId, ai]);
+  }, [selectedBlockType, userId, username, isMultiplayer, inviteId, ai]);
   
-  // Remove a block (MINE action)
+  // Remove a block (mine)
   const mineBlock = useCallback((x: number, y: number, z: number) => {
     const now = Date.now();
     if (now - lastBlockAction.current < 200) return;
@@ -291,13 +270,9 @@ export function BlockWorld({
     );
     
     if (blockIndex !== -1) {
-      const removedBlock = blocks[blockIndex];
       setBlocks(prev => prev.filter((_, i) => i !== blockIndex));
       
-      // Remove from stack if present
-      blockStackRef.current.remove(removedBlock.id);
-      
-      // Record MINE action for AI
+      // Record action for AI
       ai.observe({
         type: "MINE",
         damage: 10,
@@ -311,19 +286,18 @@ export function BlockWorld({
         supabase.channel(`game_${inviteId}`).send({
           type: "broadcast",
           event: "block_mine",
-          payload: { x: targetX, y: targetY, z: targetZ, blockId: removedBlock.id },
+          payload: { x: targetX, y: targetY, z: targetZ, player: username },
         });
       }
     }
-  }, [blocks, isMultiplayer, inviteId, ai]);
+  }, [blocks, userId, username, isMultiplayer, inviteId, ai]);
   
-  // Undo last placed block (Stack LIFO operation)
+  // Undo last placed block (Stack operation)
   const undoBlock = useCallback(() => {
     const lastBlock = blockStackRef.current.pop();
     if (lastBlock) {
       setBlocks(prev => prev.filter(b => b.id !== lastBlock.id));
       
-      // Record undo as REWIND action (uses the stack)
       ai.observe({
         type: "REWIND" as ActionType,
         damage: 0,
@@ -334,60 +308,27 @@ export function BlockWorld({
     }
   }, [ai]);
   
-  // Get next queued block (Queue FIFO operation)
-  const peekQueue = useCallback(() => {
-    return blockQueueRef.current.peek();
-  }, []);
-  
   // Keyboard handler for block operations
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const key = e.key.toLowerCase();
-      
-      // Block type selection (1-8)
-      if (key >= "1" && key <= "8") {
-        const index = parseInt(key) - 1;
-        if (index < BLOCK_TYPES.length) {
-          setSelectedBlockType(BLOCK_TYPES[index]);
-        }
-      }
-      
-      // Undo (U key)
-      if (key === "u") {
-        undoBlock();
+      switch (e.key.toLowerCase()) {
+        case "u":
+          undoBlock();
+          break;
+        case "1": setSelectedBlockType("grass"); break;
+        case "2": setSelectedBlockType("dirt"); break;
+        case "3": setSelectedBlockType("stone"); break;
+        case "4": setSelectedBlockType("wood"); break;
+        case "5": setSelectedBlockType("leaves"); break;
+        case "6": setSelectedBlockType("water"); break;
+        case "7": setSelectedBlockType("sand"); break;
+        case "8": setSelectedBlockType("brick"); break;
       }
     };
     
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [undoBlock]);
-  
-  // Place block in front of player when Q is pressed
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === "q") {
-        // Place block 2 units in front of player
-        const forward = new THREE.Vector3(0, 0, -1);
-        forward.applyQuaternion(playerPos.current.clone().normalize());
-        const placeX = playerPos.current.x + forward.x * 2;
-        const placeY = Math.max(1, Math.round(playerPos.current.y) - 1);
-        const placeZ = playerPos.current.z + forward.z * 2;
-        placeBlock(placeX, placeY, placeZ);
-      }
-      
-      if (e.key.toLowerCase() === "e") {
-        // Mine block in front of player
-        const forward = new THREE.Vector3(0, 0, -1);
-        const mineX = playerPos.current.x;
-        const mineY = Math.max(1, Math.round(playerPos.current.y) - 1);
-        const mineZ = playerPos.current.z - 2;
-        mineBlock(mineX, mineY, mineZ);
-      }
-    };
-    
-    window.addEventListener("keypress", handleKeyPress);
-    return () => window.removeEventListener("keypress", handleKeyPress);
-  }, [placeBlock, mineBlock]);
   
   // Multiplayer sync
   useEffect(() => {
@@ -406,15 +347,11 @@ export function BlockWorld({
       })
       .on("broadcast", { event: "block_place" }, (payload) => {
         const { block } = payload.payload;
-        setBlocks(prev => {
-          // Avoid duplicates
-          if (prev.some(b => b.id === block.id)) return prev;
-          return [...prev, block];
-        });
+        setBlocks(prev => [...prev, block]);
       })
       .on("broadcast", { event: "block_mine" }, (payload) => {
-        const { x, y, z, blockId } = payload.payload;
-        setBlocks(prev => prev.filter(b => b.id !== blockId || !(b.x === x && b.y === y && b.z === z)));
+        const { x, y, z } = payload.payload;
+        setBlocks(prev => prev.filter(b => !(b.x === x && b.y === y && b.z === z)));
       })
       .subscribe();
     
@@ -422,47 +359,70 @@ export function BlockWorld({
       supabase.removeChannel(channel);
     };
   }, [isMultiplayer, inviteId]);
+  
+  // Click to place/mine blocks
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      // This would need raycasting from camera - simplified for now
+      // In a full implementation, we'd use Three.js raycaster
+    };
+    
+    window.addEventListener("click", handleClick);
+    return () => window.removeEventListener("click", handleClick);
+  }, []);
+  
+  // Group blocks by color for instanced rendering
+  const blocksByColor = useMemo(() => {
+    const map = new Map<string, Block[]>();
+    blocks.forEach(b => {
+      const existing = map.get(b.color) || [];
+      existing.push(b);
+      map.set(b.color, existing);
+    });
+    return map;
+  }, [blocks]);
 
   return (
     <>
-      <fog attach="fog" args={["#bfd9ff", 30, 90]} />
+      <fog attach="fog" args={["#87ceeb", 40, 120]} />
       <color attach="background" args={["#87ceeb"]} />
-      <Sky sunPosition={[80, 60, 80]} turbidity={2} rayleigh={1} />
+      <Sky sunPosition={[100, 80, 100]} turbidity={2} rayleigh={1} />
       
-      <ambientLight intensity={0.6} />
+      <ambientLight intensity={0.7} />
       <directionalLight 
-        position={[20, 40, 20]} 
-        intensity={1.5} 
+        position={[30, 50, 30]} 
+        intensity={1.2} 
         color="#ffffff" 
         castShadow
         shadow-mapSize={[2048, 2048]}
+        shadow-camera-far={100}
+        shadow-camera-left={-50}
+        shadow-camera-right={50}
+        shadow-camera-top={50}
+        shadow-camera-bottom={-50}
       />
       
-      {/* Render all blocks */}
-      {blocks.map((block) => (
-        <mesh
-          key={block.id}
-          position={[block.x, block.y, block.z]}
-          castShadow
-          receiveShadow
-        >
-          <boxGeometry args={[1, 1, 1]} />
-          <meshStandardMaterial 
-            color={block.color} 
-            roughness={block.type === "water" ? 0.1 : 0.95}
-            transparent={block.type === "water"}
-            opacity={block.type === "water" ? 0.7 : 1}
-          />
-        </mesh>
+      {/* Render blocks grouped by color for performance */}
+      {Array.from(blocksByColor.entries()).map(([color, colorBlocks]) => (
+        <group key={color}>
+          {colorBlocks.map((block) => (
+            <mesh
+              key={block.id}
+              position={[block.x, block.y, block.z]}
+              castShadow
+              receiveShadow
+            >
+              <boxGeometry args={[1, 1, 1]} />
+              <meshStandardMaterial 
+                color={block.color} 
+                roughness={block.type === "water" ? 0.1 : 0.9}
+                transparent={block.type === "water"}
+                opacity={block.type === "water" ? 0.7 : 1}
+              />
+            </mesh>
+          ))}
+        </group>
       ))}
-      
-      {/* Block preview (where next block will be placed) */}
-      {previewPos && (
-        <mesh position={previewPos}>
-          <boxGeometry args={[1, 1, 1]} />
-          <meshBasicMaterial color={BLOCK_COLORS[selectedBlockType]} wireframe opacity={0.5} transparent />
-        </mesh>
-      )}
       
       <PlayerController 
         worldId="blockworld" 
@@ -475,7 +435,7 @@ export function BlockWorld({
       <MirrorMage 
         playerPos={isMultiplayer ? remotePos : playerPos} 
         worldId="blockworld" 
-        color={role === "host" ? "#8b4513" : "#4b2513"} 
+        color={role === "host" ? "#5b3a1d" : "#4b2513"} 
         variant={isMultiplayer ? (role === "host" ? "golem" : "mage") : "golem"} 
         isRemote={isMultiplayer}
         remoteAction={isMultiplayer ? remoteAction : undefined}

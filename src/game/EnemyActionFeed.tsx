@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { getMageAI } from "@/game/MirrorMageAI";
 import type { EnemyEvent, WorldId } from "@/game/types";
 import { cn } from "@/lib/utils";
@@ -36,25 +36,49 @@ function formatTs(ts: number): string {
   return `${hh}:${mm}:${ss}.${ms}`;
 }
 
+/** Format relative time ago */
+function formatTimeAgo(ts: number): string {
+  const elapsed = performance.now() - ts;
+  if (elapsed < 1000) return "just now";
+  if (elapsed < 60000) return `${Math.floor(elapsed / 1000)}s ago`;
+  return `${Math.floor(elapsed / 60000)}m ago`;
+}
+
+const MAX_EVENTS_PER_WORLD = 5;
+
 export function EnemyActionFeed({ worldId }: { worldId: WorldId }) {
   const [events, setEvents] = useState<EnemyEvent[]>(() => {
     const initial = getMageAI(worldId).snapshot().events;
-    // Filter to last 5 on init
-    return initial.slice(-5);
+    // Filter to last N events for this world
+    return initial.slice(-MAX_EVENTS_PER_WORLD);
   });
 
   useEffect(() => {
     const ai = getMageAI(worldId);
-    // Reset when worldId changes — only keep last 5
-    setEvents(ai.snapshot().events.slice(-5));
+    // Reset when worldId changes — only keep last N events
+    setEvents(ai.snapshot().events.slice(-MAX_EVENTS_PER_WORLD));
 
     const unsub = ai.subscribeEvents((e) => {
-      setEvents((prev) => [...prev.slice(-4), e]);
+      setEvents((prev) => {
+        const newEvents = [...prev, e];
+        // Keep only last N events per world
+        return newEvents.slice(-MAX_EVENTS_PER_WORLD);
+      });
     });
     return unsub;
   }, [worldId]);
+  
+  // Filter events to only show relevant ones for current world
+  const relevantEvents = useMemo(() => {
+    return events.slice(-MAX_EVENTS_PER_WORLD);
+  }, [events]);
 
   const src = sourceStyle;
+  
+  // Filter events to only show relevant ones for current world
+  const relevantEvents = useMemo(() => {
+    return events.slice(-MAX_EVENTS_PER_WORLD);
+  }, [events]);
 
   return (
     <div className="pointer-events-none absolute right-3 top-20 z-10 w-[22rem] select-none">
@@ -81,27 +105,38 @@ export function EnemyActionFeed({ worldId }: { worldId: WorldId }) {
         </div>
       </div>
 
-      {/* Events list */}
+      {/* Events list - Only show last N relevant events */}
       <div className="flex flex-col gap-1.5 rounded-b-lg border border-t-0 border-red-500/20 bg-black/60 p-2.5 backdrop-blur-md">
-        {events.length === 0 && (
+        {relevantEvents.length === 0 && (
           <div className="py-6 text-center font-mono text-[10px] italic text-muted-foreground/50">
             Mage is synchronizing… monitoring your patterns.
           </div>
         )}
 
-        {events.map((e, idx) => {
+        {relevantEvents.map((e, idx) => {
           const s = src[e.source] ?? src.queue;
+          const isRecent = (performance.now() - e.timestamp) < 3000;
           return (
             <div
               key={e.id}
-              className="animate-slide-in rounded-md border border-white/5 bg-gradient-to-r from-red-500/5 to-transparent p-2"
+              className={cn(
+                "animate-slide-in rounded-md border p-2 transition-all duration-300",
+                isRecent 
+                  ? "border-red-500/40 bg-gradient-to-r from-red-500/15 to-transparent" 
+                  : "border-white/5 bg-gradient-to-r from-red-500/5 to-transparent"
+              )}
               style={{ animationDelay: `${idx * 30}ms` }}
             >
-              {/* Row 1: Timestamp + Source badge */}
+              {/* Row 1: Timestamp + Source badge + Time ago */}
               <div className="mb-1.5 flex items-center justify-between">
-                <span className="font-mono text-[8px] text-muted-foreground/60 tabular-nums">
-                  [{formatTs(e.timestamp)}]
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[8px] text-muted-foreground/60 tabular-nums">
+                    [{formatTs(e.timestamp)}]
+                  </span>
+                  <span className="font-mono text-[7px] text-muted-foreground/40">
+                    {formatTimeAgo(e.timestamp)}
+                  </span>
+                </div>
                 <span
                   className={cn(
                     "flex items-center gap-1 rounded border px-1.5 py-0.5 font-mono text-[8px] font-bold uppercase tracking-widest",
@@ -120,14 +155,20 @@ export function EnemyActionFeed({ worldId }: { worldId: WorldId }) {
                   <span className="mb-0.5 font-mono text-[7px] uppercase tracking-[2px] text-muted-foreground/70">
                     Predicted
                   </span>
-                  <span className="truncate font-mono text-[11px] text-foreground/70">
+                  <span className={cn(
+                    "truncate font-mono text-[11px]",
+                    e.predicted ? "text-foreground/70" : "text-muted-foreground/50 italic"
+                  )}>
                     {e.predicted ?? "IDLE"}
                   </span>
                 </div>
 
                 {/* Arrow divider */}
                 <div className="flex flex-col items-center gap-0.5">
-                  <span className="font-mono text-[10px] text-red-500/70">→</span>
+                  <span className={cn(
+                    "font-mono text-[10px]",
+                    isRecent ? "text-red-400" : "text-red-500/70"
+                  )}>→</span>
                 </div>
 
                 {/* Counter */}
@@ -146,11 +187,20 @@ export function EnemyActionFeed({ worldId }: { worldId: WorldId }) {
                 </div>
               </div>
 
-              {/* Stack source extra hint */}
+              {/* Stack source extra hint - Signature move indicator */}
               {e.source === "stack" && (
                 <div className="mt-1.5 rounded border border-secondary/20 bg-secondary/5 px-1.5 py-0.5">
                   <span className="font-mono text-[7px] text-secondary/80 uppercase tracking-widest">
-                    ⚡ Signature Replay Deployed
+                    ⚡ Signature Replay Deployed (Stack)
+                  </span>
+                </div>
+              )}
+              
+              {/* Queue prediction indicator */}
+              {e.source === "queue" && e.predicted && (
+                <div className="mt-1.5 rounded border border-primary/20 bg-primary/5 px-1.5 py-0.5">
+                  <span className="font-mono text-[7px] text-primary/80 uppercase tracking-widest">
+                    📊 Pattern Predicted (Queue)
                   </span>
                 </div>
               )}
@@ -162,10 +212,10 @@ export function EnemyActionFeed({ worldId }: { worldId: WorldId }) {
       {/* Legend */}
       <div className="mt-1 flex items-center justify-end gap-3 px-1">
         <span className="flex items-center gap-1 font-mono text-[7px] text-primary/50 uppercase">
-          <span className="h-1 w-1 rounded-full bg-primary" /> Queue
+          <span className="h-1 w-1 rounded-full bg-primary" /> Queue (Pattern)
         </span>
         <span className="flex items-center gap-1 font-mono text-[7px] text-secondary/50 uppercase">
-          <span className="h-1 w-1 rounded-full bg-secondary" /> Stack
+          <span className="h-1 w-1 rounded-full bg-secondary" /> Stack (Signature)
         </span>
       </div>
     </div>

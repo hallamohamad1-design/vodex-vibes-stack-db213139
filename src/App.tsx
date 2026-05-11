@@ -11,6 +11,7 @@ import Vodex from "./pages/Vodex.tsx";
 import Battleground from "./pages/Battleground.tsx";
 import Virtual from "./pages/Virtual.tsx";
 import Blockworld from "./pages/Blockworld.tsx";
+import Minecraft from "./pages/Minecraft.tsx";
 import Leaderboard from "./pages/Leaderboard.tsx";
 import MultiplayerLobby from "./pages/MultiplayerLobby.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/play/battleground" element={<ProtectedRoute><Battleground /></ProtectedRoute>} />
             <Route path="/play/virtual" element={<ProtectedRoute><Virtual /></ProtectedRoute>} />
             <Route path="/play/blockworld" element={<ProtectedRoute><Blockworld /></ProtectedRoute>} />
+            <Route path="/play/minecraft" element={<ProtectedRoute><Minecraft /></ProtectedRoute>} />
             <Route path="/play/aether" element={<Navigate to="/play/battleground" replace />} />
             <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

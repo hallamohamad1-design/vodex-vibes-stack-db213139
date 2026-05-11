@@ -17,6 +17,7 @@ const WORLD_OPTIONS: { value: WorldId; label: string; icon: string }[] = [
   { value: "battleground", label: "BATTLEGROUND",  icon: "⚔" },
   { value: "virtual",      label: "VIRTUAL CORE",  icon: "⬡" },
   { value: "blockworld",   label: "BLOCKWORLD",    icon: "◼" },
+  { value: "minecraft",    label: "MINECRAFT",     icon: "⬢" },
 ];
 
 function skinInfo(skin: CharacterSkin) {

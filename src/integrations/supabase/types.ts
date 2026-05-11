@@ -115,6 +115,9 @@ export type Database = {
           updated_at: string
           user_id: string
           username: string
+          character_skin: string | null
+          last_seen_at: string | null
+          status: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -123,6 +126,9 @@ export type Database = {
           updated_at?: string
           user_id: string
           username: string
+          character_skin?: string | null
+          last_seen_at?: string | null
+          status?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -131,6 +137,195 @@ export type Database = {
           updated_at?: string
           user_id?: string
           username?: string
+          character_skin?: string | null
+          last_seen_at?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
+      messages: {
+        Row: {
+          id: string
+          sender_id: string
+          recipient_id: string | null
+          content: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          sender_id: string
+          recipient_id?: string | null
+          content: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          sender_id?: string
+          recipient_id?: string | null
+          content?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      game_invites: {
+        Row: {
+          id: string
+          sender_id: string
+          recipient_id: string
+          world: string
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          sender_id: string
+          recipient_id: string
+          world: string
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          sender_id?: string
+          recipient_id?: string
+          world?: string
+          status?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      game_history: {
+        Row: {
+          id: string
+          session_id: string | null
+          player_id: string
+          world: string
+          action_type: string
+          source: string
+          is_signature: boolean
+          created_at: string
+          stack_order: number | null
+          queue_order: number | null
+        }
+        Insert: {
+          id?: string
+          session_id?: string | null
+          player_id: string
+          world: string
+          action_type: string
+          source?: string
+          is_signature?: boolean
+          created_at?: string
+          stack_order?: number | null
+          queue_order?: number | null
+        }
+        Update: {
+          id?: string
+          session_id?: string | null
+          player_id?: string
+          world?: string
+          action_type?: string
+          source?: string
+          is_signature?: boolean
+          created_at?: string
+          stack_order?: number | null
+          queue_order?: number | null
+        }
+        Relationships: []
+      }
+      game_sessions: {
+        Row: {
+          id: string
+          invite_id: string | null
+          world: string
+          host_id: string
+          guest_id: string | null
+          status: string
+          started_at: string
+          ended_at: string | null
+          round_duration_seconds: number
+          host_score: number
+          guest_score: number
+          winner_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          invite_id?: string | null
+          world: string
+          host_id: string
+          guest_id?: string | null
+          status?: string
+          started_at?: string
+          ended_at?: string | null
+          round_duration_seconds?: number
+          host_score?: number
+          guest_score?: number
+          winner_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          invite_id?: string | null
+          world?: string
+          host_id?: string
+          guest_id?: string | null
+          status?: string
+          started_at?: string
+          ended_at?: string | null
+          round_duration_seconds?: number
+          host_score?: number
+          guest_score?: number
+          winner_id?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      world_blocks: {
+        Row: {
+          id: string
+          session_id: string | null
+          player_id: string
+          world: string
+          x: number
+          y: number
+          z: number
+          block_type: string
+          color: string
+          placed_at: string
+          is_removed: boolean
+          removed_at: string | null
+          removed_by: string | null
+        }
+        Insert: {
+          id?: string
+          session_id?: string | null
+          player_id: string
+          world?: string
+          x: number
+          y: number
+          z: number
+          block_type?: string
+          color?: string
+          placed_at?: string
+          is_removed?: boolean
+          removed_at?: string | null
+          removed_by?: string | null
+        }
+        Update: {
+          id?: string
+          session_id?: string | null
+          player_id?: string
+          world?: string
+          x?: number
+          y?: number
+          z?: number
+          block_type?: string
+          color?: string
+          placed_at?: string
+          is_removed?: boolean
+          removed_at?: string | null
+          removed_by?: string | null
         }
         Relationships: []
       }
