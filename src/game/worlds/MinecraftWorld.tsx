@@ -5,7 +5,8 @@ import { PlayerController } from "@/game/PlayerController";
 import { MirrorMage } from "@/game/MirrorMage";
 import { supabase } from "@/integrations/supabase/client";
 import { getMageAI } from "@/game/MirrorMageAI";
-import type { CounterAction, ActionType, WorldId } from "@/game/types";
+import type { BlockType } from "@/game/BlockBuilderHUD";
+import type { CounterAction, ActionType } from "@/game/types";
 
 /**
  * MinecraftWorld — Full 3D voxel building world with Stack & Queue mechanics.
@@ -26,8 +27,6 @@ interface Block {
   placedBy: string;
   timestamp: number;
 }
-
-type BlockType = "grass" | "dirt" | "stone" | "wood" | "leaves" | "water" | "sand" | "brick";
 
 const BLOCK_COLORS: Record<BlockType, string> = {
   grass: "#4caf50",
@@ -360,16 +359,8 @@ export function MinecraftWorld({
     };
   }, [isMultiplayer, inviteId]);
   
-  // Click to place/mine blocks
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      // This would need raycasting from camera - simplified for now
-      // In a full implementation, we'd use Three.js raycaster
-    };
-    
-    window.addEventListener("click", handleClick);
-    return () => window.removeEventListener("click", handleClick);
-  }, []);
+  // Click to place/mine blocks — handled via keyboard (Q/E) in PlayerController
+  // Raycasting-based click placement can be added in a future iteration
   
   // Group blocks by color for instanced rendering
   const blocksByColor = useMemo(() => {

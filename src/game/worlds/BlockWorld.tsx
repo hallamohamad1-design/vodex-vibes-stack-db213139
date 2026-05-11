@@ -5,36 +5,10 @@ import { PlayerController } from "@/game/PlayerController";
 import { MirrorMage } from "@/game/MirrorMage";
 import { supabase } from "@/integrations/supabase/client";
 import { getMageAI } from "@/game/MirrorMageAI";
-import type { CounterAction, ActionType, WorldId } from "@/game/types";
+import type { BlockType } from "@/game/BlockBuilderHUD";
+import type { CounterAction, ActionType } from "@/game/types";
 
-/**
- * BlockWorld — Minecraft-style voxel terrain with Stack & Queue mechanics.
- * 
- * Stack (LIFO): Stores placed blocks for UNDO functionality (U key)
- * Queue (FIFO): Tracks pending block operations in chronological order
- * 
- * Controls:
- * - Q: Place block (MINE action becomes BUILD in blockworld context)
- * - E: Mine/destroy block (MINE action)
- * - R: KILL (special action)
- * - U: Undo last placed block (Stack pop)
- * - 1-8: Select block type
- * 
- * Each block placed is recorded in the game history.
- */
-
-interface Block {
-  id: string;
-  x: number;
-  y: number;
-  z: number;
-  color: string;
-  type: BlockType;
-  placedBy: string;
-  timestamp: number;
-}
-
-type BlockType = "grass" | "dirt" | "stone" | "wood" | "leaves" | "water" | "sand" | "brick";
+export type { BlockType };
 
 const BLOCK_COLORS: Record<BlockType, string> = {
   grass: "#4caf50",
@@ -48,6 +22,17 @@ const BLOCK_COLORS: Record<BlockType, string> = {
 };
 
 const BLOCK_TYPES: BlockType[] = ["grass", "dirt", "stone", "wood", "leaves", "water", "sand", "brick"];
+
+interface Block {
+  id: string;
+  x: number;
+  y: number;
+  z: number;
+  color: string;
+  type: BlockType;
+  placedBy: string;
+  timestamp: number;
+}
 
 // Stack for block undo (LIFO) - player can undo last placed block
 class BlockStack {

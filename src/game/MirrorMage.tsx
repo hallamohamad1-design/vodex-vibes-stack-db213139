@@ -1,6 +1,6 @@
 import { useFrame } from "@react-three/fiber";
+import { Text } from "@react-three/drei";
 import { useEffect, useRef, useState } from "react";
-// import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import { getMageAI } from "@/game/MirrorMageAI";
 import type { CounterAction, WorldId } from "@/game/types";
@@ -116,7 +116,6 @@ export function MirrorMage({ playerPos, worldId = "vodex", color = "#bf00ff", va
           position={[0, 1.8, 0]}
           fontSize={0.25}
           color={bodyColor}
-          font="/fonts/Inter-Bold.woff" // Assuming Inter is available or fallback
           anchorX="center"
           anchorY="middle"
         >

@@ -10,7 +10,8 @@
  */
 
 import { cn } from "@/lib/utils";
-import type { BlockType } from "@/game/worlds/BlockWorld";
+
+export type BlockType = "grass" | "dirt" | "stone" | "wood" | "leaves" | "water" | "sand" | "brick";
 
 interface Props {
   selectedBlockType: BlockType;
