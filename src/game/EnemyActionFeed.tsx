@@ -74,11 +74,6 @@ export function EnemyActionFeed({ worldId }: { worldId: WorldId }) {
   }, [events]);
 
   const src = sourceStyle;
-  
-  // Filter events to only show relevant ones for current world
-  const relevantEvents = useMemo(() => {
-    return events.slice(-MAX_EVENTS_PER_WORLD);
-  }, [events]);
 
   return (
     <div className="pointer-events-none absolute right-3 top-20 z-10 w-[22rem] select-none">
